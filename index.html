@@ -36,16 +36,32 @@
     .stat small{color:var(--muted);font-weight:700}.stat b{display:block;font-size:22px;margin-top:6px}
     .stat.g b{color:var(--green)}.stat.p b{color:var(--purple)}.stat.k b{color:var(--pink)}
     .bar{background:#f0edff;border-radius:8px;height:9px;min-width:70px;overflow:hidden}.bar i{display:block;height:100%;background:var(--purple)}
-    #receipt{display:none}
+    
+    /* نافذة الفاتورة */
+    .receipt-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+    .receipt-modal.show{display:flex}
+    .receipt-box{background:#fff;padding:20px;border-radius:16px;width:100%;max-width:340px;direction:rtl}
+    .receipt-box h2{text-align:center;font-size:24px;margin-bottom:5px;color:var(--ink)}
+    .receipt-box .c{text-align:center;color:var(--muted);font-size:12px;margin-bottom:10px}
+    .receipt-box hr{border:0;border-top:1px dashed #ccc;margin:10px 0}
+    .receipt-box table{width:100%;font-size:13px}
+    .receipt-box td{padding:4px 0;border:0;text-align:right}
+    .receipt-box td:last-child{text-align:left}
+    .receipt-box .t{font-size:18px;font-weight:800;display:flex;justify-content:space-between;margin-top:10px}
+    .receipt-actions{display:flex;gap:10px;margin-top:20px}
+    
     @media print{
      body{overflow:visible!important;background:#fff!important;min-height:0}
      body:before{display:none!important}
-     .app,.menu-toggle,#message-box,.modal-bg{display:none!important}
-     #receipt{display:block;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
-     #receipt h2{text-align:center;font-size:22px}#receipt .c{text-align:center}
-     #receipt hr{border:0;border-top:1px dashed #000;margin:6px 0}
-     #receipt table{width:100%;font-size:12px}#receipt td{border:0;padding:2px 0;text-align:right}
-     #receipt td:last-child{text-align:left}#receipt .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
+     .app,.menu-toggle,#message-box,.modal-bg,.receipt-modal{display:none!important}
+     #receipt-print{display:block!important;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
+     #receipt-print h2{text-align:center;font-size:22px}
+     #receipt-print .c{text-align:center}
+     #receipt-print hr{border:0;border-top:1px dashed #000;margin:6px 0}
+     #receipt-print table{width:100%;font-size:12px}
+     #receipt-print td{border:0;padding:2px 0;text-align:right}
+     #receipt-print td:last-child{text-align:left}
+     #receipt-print .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
      @page{size:80mm auto;margin:2mm}
     }
   </style>
@@ -66,7 +82,7 @@
       <div class="topbar"><div><div class="eyebrow">أهلاً بك في عالم اللعب</div><h2 id="page-title">نقطة البيع</h2></div><div class="connection"><i class="dot"></i> الربط يعمل بأمان</div></div>
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
-        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button><button class="btn secondary full" id="print-btn" style="display:none;margin-top:8px" onclick="printLastReceipt()">🖨️ طباعة الفاتورة</button></div></div></div>
+        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
       </section>
       <section id="page-inventory" class="page">
         <div class="grid-two" style="grid-template-columns:1fr"><div class="card"><h3>➕ إضافة لعبة جديدة</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name" placeholder="مثال: سيارة سباق صغيرة"></div><div class="form-group"><label>الباركود / كود اللعبة</label><input id="p_barcode" placeholder="اختياري"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0" min="0" step="0.01"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0" min="0" step="0.01"></div></div><div class="form-group"><label>الكمية في المخزن *</label><input type="number" id="p_quantity" value="0" min="0" step="1" placeholder="اكتب الكمية المتاحة"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والمخزون 🎈</button></div></div>
@@ -100,6 +116,7 @@
       </section>
     </main>
   </div>
+  
   <div class="modal-bg" id="edit-modal">
     <div class="modal"><h3>✏️ تعديل الصنف</h3>
       <div class="form-group"><label>اسم الصنف *</label><input id="e_name"></div>
@@ -110,11 +127,22 @@
       <div class="row"><button class="btn full" onclick="saveEdit()">حفظ التعديل</button><button class="btn secondary full" onclick="closeEdit()">إلغاء</button></div>
     </div>
   </div>
+
+  <!-- نافذة عرض الفاتورة -->
+  <div class="receipt-modal" id="receipt-modal">
+    <div class="receipt-box" id="receipt-content"></div>
+    <div class="receipt-actions" style="max-width:340px;width:100%">
+      <button class="btn full" onclick="doPrint()">🖨️ طباعة</button>
+      <button class="btn secondary full" onclick="closeReceipt()">إغلاق</button>
+    </div>
+  </div>
+  <div id="receipt-print" style="display:none"></div>
+
   <script>
     const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
     const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
     const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    let allProducts=[], stockByProduct={}, cart=[], defaultWarehouseId=null;
+    let allProducts=[], stockByProduct={}, cart=[], defaultWarehouseId=null, lastReceipt=null;
     const icons=['🧸','🚗','🧩','🎨','🚂','🪁','🎲','🦄','🤖','🎸'];
     
     function switchPage(page,button){
@@ -206,8 +234,8 @@
       item.qty+=delta;if(item.qty<=0)cart.splice(index,1);renderCart();
     }
     function renderCart(){
-      const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total'),printBtn=document.getElementById('print-btn');
-      if(!cart.length){box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';totalBox.textContent='0.00 ج.م';document.getElementById('cart-count').textContent='0 ألعاب';printBtn.style.display='none';return}
+      const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total');
+      if(!cart.length){box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';totalBox.textContent='0.00 ج.م';document.getElementById('cart-count').textContent='0 ألعاب';return}
       let total=0,count=0;
       box.innerHTML=cart.map((item,index)=>{
         total+=Number(item.default_sale_price)*item.qty;count+=item.qty;
@@ -218,7 +246,23 @@
     function money(v){return Number(v||0).toFixed(2)+' ج.م'}
     function escapeHtml(v){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
     
-    let lastReceipt=null;
+    function buildReceipt(sale, items) {
+      return `<h2>TREND</h2><p class="c">متجر الألعاب</p><p class="c">فاتورة رقم ${sale.id}<br>${new Date(sale.created_at||new Date()).toLocaleString('ar-EG')}</p><hr><table>${items.map(i=>`<tr><td colspan="2"><b>${escapeHtml(i.product_name)}</b></td></tr><tr><td>${i.qty} × ${Number(i.unit_price).toFixed(2)}</td><td>${(i.qty*i.unit_price).toFixed(2)}</td></tr>`).join('')}</table><hr><div class="t">الإجمالي <span>${money(sale.total)}</span></div><hr><p class="c">شكراً لزيارتكم 🧸</p>`;
+    }
+
+    function showReceiptModal(sale, items) {
+      document.getElementById('receipt-content').innerHTML = buildReceipt(sale, items);
+      document.getElementById('receipt-modal').classList.add('show');
+    }
+    function closeReceipt() {
+      document.getElementById('receipt-modal').classList.remove('show');
+    }
+    function doPrint() {
+      if(!lastReceipt) return;
+      document.getElementById('receipt-print').innerHTML = buildReceipt(lastReceipt.sale, lastReceipt.items);
+      setTimeout(()=>window.print(), 100);
+    }
+    
     async function checkout(){
       if(!cart.length)return showMessage('السلة فارغة',true);
       if(!defaultWarehouseId)return showMessage('يجب إضافة مخزن أولاً',true);
@@ -237,19 +281,12 @@
           if(r.error)throw r.error;
         }
         lastReceipt={sale,items};
-        document.getElementById('print-btn').style.display='block';
         cart=[];renderCart();
-        showMessage('تم البيع بنجاح! الإجمالي: '+money(total)+' — اضغط على "طباعة الفاتورة"');
+        showMessage('تم البيع بنجاح! الإجمالي: '+money(total));
         await loadProducts();
+        showReceiptModal(sale, items);
       }catch(e){showMessage(e.message||'حدث خطأ أثناء البيع',true)}
     }
-    function printReceipt(sale,items){
-      let r=document.getElementById('receipt');
-      if(!r){r=document.createElement('div');r.id='receipt';document.body.appendChild(r)}
-      r.innerHTML=`<h2>TREND</h2><p class="c">متجر الألعاب</p><p class="c">فاتورة رقم ${sale.id}<br>${new Date(sale.created_at||new Date()).toLocaleString('ar-EG')}</p><hr><table>${items.map(i=>`<tr><td colspan="2"><b>${escapeHtml(i.product_name)}</b></td></tr><tr><td>${i.qty} × ${Number(i.unit_price).toFixed(2)}</td><td>${(i.qty*i.unit_price).toFixed(2)}</td></tr>`).join('')}</table><hr><div class="t"><span>الإجمالي</span><span>${money(sale.total)}</span></div><hr><p class="c">شكراً لزيارتكم 🧸</p>`;
-      setTimeout(()=>window.print(),200);
-    }
-    function printLastReceipt(){if(lastReceipt)printReceipt(lastReceipt.sale,lastReceipt.items)}
     
     async function loadReports(){
       const box=document.getElementById('rep-body');const p=document.getElementById('rep-period').value,d=new Date();d.setHours(0,0,0,0);
@@ -271,7 +308,7 @@
         const top=Object.entries(byProd).sort((a,b)=>b[1].rev-a[1].rev).slice(0,10),byDay={};
         sales.forEach(s=>{const k=new Date(s.created_at).toLocaleDateString('ar-EG');const o=byDay[k]||(byDay[k]={n:0,rev:0,profit:0});o.n++;o.rev+=Number(s.total);o.profit+=Number(s.profit)});
         box.innerHTML=`<div class="stats"><div class="stat p"><small>إجمالي المبيعات</small><b>${money(rev)}</b></div><div class="stat g"><small>صافي الربح</small><b>${money(profit)}</b></div><div class="stat k"><small>نسبة الربح</small><b>${margin.toFixed(1)}%</b></div><div class="stat"><small>عدد الفواتير</small><b>${sales.length}</b></div><div class="stat"><small>القطع المباعة</small><b>${pieces}</b></div><div class="stat"><small>متوسط الفاتورة</small><b>${money(sales.length?rev/sales.length:0)}</b></div></div><div class="card"><h3>🏆 الأكثر مبيعاً</h3><div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>المبيعات</th><th>الربح</th><th>نسبة من المبيعات</th></tr></thead><tbody>${top.length?top.map(([n,o])=>{const sh=rev?o.rev/rev*100:0;return `<tr><td><b>${escapeHtml(n)}</b></td><td>${o.qty}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td><td><div class="bar"><i style="width:${sh}%"></i></div><small>${sh.toFixed(1)}%</small></td></tr>`}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد مبيعات في هذه الفترة</td></tr>'}</tbody></table></div></div><div class="card"><h3>📅 المبيعات اليومية</h3><div class="table-wrap"><table><thead><tr><th>اليوم</th><th>الفواتير</th><th>المبيعات</th><th>الربح</th></tr></thead><tbody>${Object.entries(byDay).map(([k,o])=>`<tr><td>${k}</td><td>${o.n}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا توجد بيانات</td></tr>'}</tbody></table></div></div>`;
-      }catch(e){box.innerHTML='<p style="color:var(--red)">تعذر تحميل التقارير: '+escapeHtml(e.message)+'<br>تأكد من تشغيل كود SQL الخاص بجدول sales و sale_items.</p>'}
+      }catch(e){box.innerHTML='<p style="color:var(--red)">تعذر تحميل التقارير: '+escapeHtml(e.message)+'</p>'}
     }
     
     let storageList=[],curWh=null,sItems=[],editingS=null;
