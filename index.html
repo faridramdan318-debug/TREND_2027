@@ -2,210 +2,122 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gifts ERP - إدارة المخازن والأصناف</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>TREND | نظام إدارة المتجر</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .header h1 { margin: 0; font-size: 24px; color: #2c3e50; }
-        .container { display: flex; gap: 20px; flex-wrap: wrap; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex: 1; min-width: 300px; }
-        .card h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; color: #34495e; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
-        button { background-color: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%; font-weight: bold; margin-top: 10px; }
-        button:hover { background-color: #219150; }
-        button.danger { background-color: #e74c3c; }
-        button.danger:hover { background-color: #c0392b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { padding: 10px; text-align: right; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; font-weight: bold; color: #555; }
-        .status { padding: 10px; text-align: center; border-radius: 5px; margin-bottom: 15px; display: none; }
-        .status.success { display: block; background-color: #d4edda; color: #155724; }
-        .status.error { display: block; background-color: #f8d7da; color: #721c24; }
+        :root{--bg:#f4f7f6;--sidebar:#111827;--sidebar-hover:#1f2937;--primary:#10b981;--text:#374151;--white:#fff;--border:#e5e7eb;}
+        *{box-sizing:border-box;font-family:'Cairo',sans-serif;margin:0;padding:0;}
+        body{background:var(--bg);display:flex;height:100vh;overflow:hidden;color:var(--text);}
+        .sidebar{width:260px;background:var(--sidebar);color:#9ca3af;display:flex;flex-direction:column;transition:.3s;}
+        .sidebar .logo{padding:25px 20px;text-align:center;font-size:28px;font-weight:700;color:var(--white);border-bottom:1px solid #374151;letter-spacing:2px;}
+        .sidebar button{background:none;border:none;color:#9ca3af;padding:18px 24px;text-align:right;font-size:16px;cursor:pointer;transition:.2s;width:100%;font-weight:600;display:flex;align-items:center;gap:12px;}
+        .sidebar button:hover,.sidebar button.active{background:var(--sidebar-hover);color:var(--primary);border-right:4px solid var(--primary);}
+        .main-content{flex:1;padding:30px;overflow-y:auto;display:flex;flex-direction:column;gap:25px;}
+        .page{display:none;animation:fadeIn .3s ease-in-out;}
+        .page.active{display:block;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+        .card{background:var(--white);padding:25px;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);margin-bottom:25px;border:1px solid var(--border);}
+        .card h3{margin-bottom:20px;color:var(--sidebar);font-size:18px;border-bottom:2px solid var(--border);padding-bottom:15px;}
+        .form-group{margin-bottom:18px;}
+        label{display:block;margin-bottom:8px;font-weight:600;font-size:14px;color:#4b5563;}
+        input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:.2s;font-family:'Cairo';}
+        input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,185,129,.2);}
+        button.btn{background:var(--primary);color:var(--white);border:none;padding:12px 20px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700;width:100%;transition:.2s;}
+        button.btn:hover{background:#059669;}
+        table{width:100%;border-collapse:collapse;margin-top:15px;font-size:14px;}
+        th,td{padding:15px;text-align:right;border-bottom:1px solid var(--border);}
+        th{background:#f9fafb;font-weight:700;color:#4b5563;}
+        tr:hover{background:#f9fafb;}
+        .pos-layout{display:flex;gap:25px;height:calc(100vh - 60px);}
+        .pos-products{flex:2;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px;align-content:start;}
+        .product-card{background:var(--white);padding:20px;border-radius:12px;text-align:center;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.04);transition:.2s;border:1px solid var(--border);display:flex;flex-direction:column;justify-content:space-between;}
+        .product-card:hover{transform:translateY(-5px);box-shadow:0 10px 15px -3px rgba(0,0,0,.1);border-color:var(--primary);}
+        .product-card h4{margin-bottom:15px;color:var(--sidebar);font-size:16px;}
+        .product-card .price{color:var(--primary);font-weight:700;font-size:20px;}
+        .pos-cart{flex:1;background:var(--white);border-radius:12px;display:flex;flex-direction:column;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);border:1px solid var(--border);}
+        .pos-cart h3{padding:20px;background:var(--sidebar);color:var(--white);margin:0;border-radius:12px 12px 0 0;text-align:center;font-size:18px;}
+        .cart-items{flex:1;overflow-y:auto;padding:20px;}
+        .cart-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding:15px 0;}
+        .cart-item-info h5{margin:0 0 5px;font-size:15px;color:var(--sidebar);}
+        .cart-item-info span{font-size:13px;color:#6b7280;}
+        .cart-controls{display:flex;align-items:center;gap:12px;background:#f3f4f6;padding:5px 10px;border-radius:8px;}
+        .cart-controls button{padding:4px 10px;border:none;background:var(--white);border-radius:4px;cursor:pointer;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1);}
+        .cart-footer{padding:20px;background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid var(--border);}
+        .total-row{display:flex;justify-content:space-between;font-size:24px;font-weight:700;margin-bottom:20px;color:var(--sidebar);}
+        .message{padding:15px;text-align:center;border-radius:8px;margin-bottom:20px;display:none;font-weight:700;}
+        .message.success{display:block;background:#d1fae5;color:#065f46;border:1px solid #10b981;}
+        .message.error{display:block;background:#fee2e2;color:#991b1b;border:1px solid #ef4444;}
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>🎁 نظام إدارة المتجر والمخازن</h1>
-        <div style="font-size: 14px; color: #7f8c8d;">مرحباً بك في لوحة التحكم</div>
+    <div class="sidebar">
+        <div class="logo">TREND</div>
+        <button class="active" onclick="switchPage('pos')">🛒 نقطة البيع (POS)</button>
+        <button onclick="switchPage('inventory')">📦 المخزن والأصناف</button>
+        <button onclick="switchPage('reports')">📊 التقارير والأرباح</button>
     </div>
-
-    <div id="message-box" class="status"></div>
-
-    <div class="container">
-        <!-- قسم إضافة صنف جديد -->
-        <div class="card">
-            <h2>➕ إضافة صنف جديد</h2>
-            <div class="form-group">
-                <label>اسم الصنف</label>
-                <input type="text" id="p_name" placeholder="مثال: عروسة باربي">
-            </div>
-            <div class="form-group">
-                <label>الباركود (اختياري)</label>
-                <input type="text" id="p_barcode" placeholder="امسح الباركود هنا">
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>سعر الشراء</label>
-                    <input type="number" id="p_purchase" placeholder="0.00">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>سعر البيع</label>
-                    <input type="number" id="p_sale" placeholder="0.00">
+    <div class="main-content">
+        <div id="message-box" class="message"></div>
+        <div id="page-pos" class="page active">
+            <div class="pos-layout">
+                <div class="pos-products" id="pos-products-list"></div>
+                <div class="pos-cart">
+                    <h3>سلة المشتريات</h3>
+                    <div class="cart-items" id="cart-items"><p style="text-align:center;color:#9ca3af;margin-top:20px;">السلة فارغة</p></div>
+                    <div class="cart-footer">
+                        <div class="total-row"><span>الإجمالي:</span><span id="cart-total">0.00 ج.م</span></div>
+                        <button class="btn" onclick="checkout()">إتمام البيع</button>
+                    </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label>حد التنبيه (نقص المخزون)</label>
-                <input type="number" id="p_min" value="5">
-            </div>
-            <button onclick="addProduct()">حفظ الصنف في قاعدة البيانات</button>
         </div>
-
-        <!-- قسم إضافة مخزن جديد -->
-        <div class="card">
-            <h2>🏬 إضافة مخزن جديد</h2>
-            <div class="form-group">
-                <label>اسم المخزن</label>
-                <input type="text" id="w_name" placeholder="مثال: مخزن المحل الرئيسي">
+        <div id="page-inventory" class="page">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:25px;">
+                <div class="card">
+                    <h3>➕ إضافة صنف جديد</h3>
+                    <div class="form-group"><label>اسم الصنف</label><input type="text" id="p_name"></div>
+                    <div class="form-group"><label>الباركود</label><input type="text" id="p_barcode"></div>
+                    <div style="display:flex;gap:15px;">
+                        <div class="form-group" style="flex:1;"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div>
+                        <div class="form-group" style="flex:1;"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div>
+                    </div>
+                    <button class="btn" onclick="addProduct()">حفظ الصنف</button>
+                </div>
+                <div class="card">
+                    <h3>🏬 إضافة مخزن جديد</h3>
+                    <div class="form-group"><label>اسم المخزن</label><input type="text" id="w_name"></div>
+                    <div class="form-group"><label>كود المخزن</label><input type="text" id="w_code"></div>
+                    <button class="btn" onclick="addWarehouse()">حفظ المخزن</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label>كود المخزن</label>
-                <input type="text" id="w_code" placeholder="مثال: WH01">
+            <div class="card">
+                <h3>📋 قائمة الأصناف</h3>
+                <table><thead><tr><th>#</th><th>اسم الصنف</th><th>الباركود</th><th>سعر الشراء</th><th>سعر البيع</th><th>الرصيد</th></tr></thead><tbody id="inventory-table"></tbody></table>
             </div>
-            <button onclick="addWarehouse()">حفظ المخزن</button>
         </div>
-    </div>
-
-    <div class="container" style="margin-top: 20px;">
-        <!-- قسم عرض الأصناف ورصيدها -->
-        <div class="card" style="flex: 100%;">
-            <h2>📦 قائمة الأصناف ورصيد المخازن</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>اسم الصنف</th>
-                        <th>الباركود</th>
-                        <th>سعر الشراء</th>
-                        <th>سعر البيع</th>
-                        <th>الرصيد الحالي (في المخازن)</th>
-                    </tr>
-                </thead>
-                <tbody id="products-table">
-                    <tr><td colspan="6" style="text-align: center;">جاري تحميل البيانات...</td></tr>
-                </tbody>
-            </table>
+        <div id="page-reports" class="page">
+            <div class="card"><h3>📊 تقرير الأرباح</h3><p style="color:#6b7280;">جاري تطوير التقارير...</p></div>
         </div>
     </div>
-
     <script>
-        // إعدادات Supabase
-        const SUPABASE_URL = 'https://aglpfacjifatdkcghlr.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_s2RbinlHoFHyrkRv8DTjMg_PJYriFCT';
-        
-        const { createClient } = supabase;
-        const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // دالة عرض الرسائل
-        function showMessage(msg, isError = false) {
-            const box = document.getElementById('message-box');
-            box.className = 'status ' + (isError ? 'error' : 'success');
-            box.innerText = msg;
-            setTimeout(() => { box.style.display = 'none'; }, 4000);
-        }
-
-        // إضافة صنف
-        async function addProduct() {
-            const name = document.getElementById('p_name').value;
-            const barcode = document.getElementById('p_barcode').value || null;
-            const purchase = parseFloat(document.getElementById('p_purchase').value) || 0;
-            const sale = parseFloat(document.getElementById('p_sale').value) || 0;
-            const minStock = parseFloat(document.getElementById('p_min').value) || 5;
-
-            if (!name) return showMessage('يرجى إدخال اسم الصنف', true);
-
-            const { data, error } = await db
-                .from('products')
-                .insert([{ name, barcode, default_purchase_price: purchase, default_sale_price: sale, min_stock: minStock }])
-                .select();
-
-            if (error) {
-                showMessage('خطأ في الحفظ: ' + error.message, true);
-            } else {
-                showMessage('تم إضافة الصنف بنجاح!');
-                document.getElementById('p_name').value = '';
-                document.getElementById('p_barcode').value = '';
-                document.getElementById('p_purchase').value = '';
-                document.getElementById('p_sale').value = '';
-                loadProducts();
-            }
-        }
-
-        // إضافة مخزن
-        async function addWarehouse() {
-            const name = document.getElementById('w_name').value;
-            const code = document.getElementById('w_code').value || null;
-
-            if (!name) return showMessage('يرجى إدخال اسم المخزن', true);
-
-            const { error } = await db
-                .from('warehouses')
-                .insert([{ name, code }]);
-
-            if (error) {
-                showMessage('خطأ في الحفظ: ' + error.message, true);
-            } else {
-                showMessage('تم إضافة المخزن بنجاح!');
-                document.getElementById('w_name').value = '';
-                document.getElementById('w_code').value = '';
-            }
-        }
-
-        // تحميل الأصناف والرصيد
-        async function loadProducts() {
-            const tbody = document.getElementById('products-table');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">جاري التحميل...</td></tr>';
-
-            const { data: products, error } = await db.from('products').select('*').order('id', { ascending: false });
-            
-            if (error) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">حدث خطأ: ${error.message}</td></tr>`;
-                return;
-            }
-
-            if (products.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">لا يوجد أصناف بعد. أضف صنفاً جديداً.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = '';
-            for (let i = 0; i < products.length; i++) {
-                const p = products[i];
-                
-                // جلب الرصيد من جدول product_stock
-                const { data: stockData } = await db.from('product_stock').select('quantity').eq('product_id', p.id);
-                const totalStock = stockData && stockData.length > 0 ? stockData.reduce((sum, item) => sum + Number(item.quantity), 0) : 0;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><strong>${p.name}</strong></td>
-                        <td>${p.barcode || '-'}</td>
-                        <td>${p.default_purchase_price} ج.م</td>
-                        <td>${p.default_sale_price} ج.م</td>
-                        <td>${totalStock}</td>
-                    </tr>
-                `;
-            }
-        }
-
-        // تشغيل تحميل البيانات عند فتح الصفحة
-        window.onload = loadProducts;
+        const SUPABASE_URL='https://aglpfacjifatdkcghlr.supabase.co',SUPABASE_KEY='sb_publishable_s2RbinlHoFHyrkRv8DTjMg_PJYriFCT',{createClient}=supabase,db=createClient(SUPABASE_URL,SUPABASE_KEY);let allProducts=[],cart=[],defaultWarehouseId=null;
+        function switchPage(e){document.querySelectorAll('.page').forEach(e=>e.classList.remove('active')),document.querySelectorAll('.sidebar button').forEach(e=>e.classList.remove('active')),document.getElementById('page-'+e).classList.add('active'),event.target.classList.add('active')}
+        function showMessage(e,t=!1){const n=document.getElementById('message-box');n.className='message '+(t?'error':'success'),n.innerText=e,setTimeout(()=>{n.style.display='none'},3e3)}
+        async function init(){const{data:e}=await db.from('warehouses').select('id').limit(1);e&&e.length>0&&(defaultWarehouseId=e[0].id);await loadProducts()}
+        async function loadProducts(){const{data:e,error:t}=await db.from('products').select('*').order('id',{ascending:!1});if(t)return console.error(t);allProducts=e||[],renderInventoryTable(),renderPOSProducts()}
+        async function addProduct(){const e=document.getElementById('p_name').value;if(!e)return showMessage('ادخل اسم الصنف',!0);const{error:t}=await db.from('products').insert([{name:e,barcode:document.getElementById('p_barcode').value||null,default_purchase_price:parseFloat(document.getElementById('p_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('p_sale').value)||0}]);if(t)return showMessage('خطأ: '+t.message,!0);showMessage('تم إضافة الصنف بنجاح!'),document.getElementById('p_name').value='',document.getElementById('p_barcode').value='',loadProducts()}
+        async function addWarehouse(){const e=document.getElementById('w_name').value;if(!e)return showMessage('ادخل اسم المخزن',!0);const{error:t}=await db.from('warehouses').insert([{name:e,code:document.getElementById('w_code').value||null}]);if(t)return showMessage('خطأ: '+t.message,!0);showMessage('تم إضافة المخزن بنجاح!'),document.getElementById('w_name').value='',document.getElementById('w_code').value=''}
+        async function renderInventoryTable(){const e=document.getElementById('inventory-table');if(0===allProducts.length)return void(e.innerHTML='<tr><td colspan="6" style="text-align:center;color:#9ca3af;">لا يوجد أصناف</td></tr>');e.innerHTML='';for(let t of allProducts){const{data:n}=await db.from('product_stock').select('quantity').eq('product_id',t.id),a=n?n.reduce((e,t)=>e+Number(t.quantity),0):0;e.innerHTML+=`<tr><td>${t.id}</td><td><strong>${t.name}</strong></td><td>${t.barcode||'-'}</td><td>${t.default_purchase_price} ج.م</td><td>${t.default_sale_price} ج.م</td><td>${a}</td></tr>`}}
+        function renderPOSProducts(){const e=document.getElementById('pos-products-list');e.innerHTML='',allProducts.forEach(t=>{e.innerHTML+=`<div class="product-card" onclick="addToCart(${t.id})"><h4>${t.name}</h4><div class="price">${t.default_sale_price} ج.م</div></div>`})}
+        function addToCart(e){const t=allProducts.find(t=>t.id===e),n=cart.find(t=>t.id===e);n?n.qty++:cart.push({...t,qty:1}),renderCart()}
+        function renderCart(){const e=document.getElementById('cart-items'),t=document.getElementById('cart-total');if(0===cart.length)return e.innerHTML='<p style="text-align:center;color:#9ca3af;margin-top:20px;">السلة فارغة</p>',void(t.innerText='0.00 ج.م');e.innerHTML='';let n=0;cart.forEach((t,a)=>{n+=t.default_sale_price*t.qty,e.innerHTML+=`<div class="cart-item"><div class="cart-item-info"><h5>${t.name}</h5><span>${t.default_sale_price} ج.م × ${t.qty}</span></div><div class="cart-controls"><button onclick="updateQty(${a},-1)">-</button><span>${t.qty}</span><button onclick="updateQty(${a},1)">+</button></div></div>`}),t.innerText=n.toFixed(2)+' ج.م'}
+        function updateQty(e,t){cart[e].qty+=t,cart[e].qty<=0&&cart.splice(e,1),renderCart()}
+        async function checkout(){if(0===cart.length)return showMessage('السلة فارغة',!0);if(!defaultWarehouseId)return showMessage('يجب إضافة مخزن أولاً',!0);const e=cart.reduce((e,t)=>e+t.default_sale_price*t.qty,0);for(let e of cart){const{data:t}=await db.from('product_stock').select('*').eq('product_id',e.id).eq('warehouse_id',defaultWarehouseId).single();t?await db.from('product_stock').update({quantity:t.quantity-e.qty}).eq('id',t.id):await db.from('product_stock').insert([{product_id:e.id,warehouse_id:defaultWarehouseId,quantity:-e.qty}])}showMessage(`تم البيع بنجاح! الإجمالي: ${e.toFixed(2)} ج.م`),cart=[],renderCart(),loadProducts()}
+        window.onload=init;
     </script>
 </body>
 </html>
