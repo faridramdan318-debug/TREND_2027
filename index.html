@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>TREND | نظام إدارة محل الألعاب</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -28,6 +26,28 @@
     .message{position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:20;padding:13px 20px;border-radius:13px;display:none;font-weight:700;font-size:13px;box-shadow:var(--shadow)}.message.show{display:block}.message.success{background:#e4f8ef;color:#14734f;border:1px solid #a9e6cc}.message.error{background:#fff0f1;color:#b43343;border:1px solid #ffbcc5}.menu-toggle{display:none}
     @media(max-width:900px){body{overflow:auto}.app{height:auto;min-height:100vh}.sidebar{width:225px}.main{padding:22px 18px}.pos-layout{grid-template-columns:1fr}.products{max-height:none}.cart{min-height:430px}.hero-art{font-size:48px}.grid-two{grid-template-columns:1fr}}
     @media(max-width:650px){.sidebar{position:fixed;right:-240px;top:0;height:100vh;transition:.25s}.sidebar.show{right:0}.menu-toggle{display:block;position:fixed;right:14px;top:13px;z-index:10;border:0;background:#302854;color:#fff;border-radius:12px;padding:9px 12px;font-size:20px}.main{padding-top:68px}.topbar{align-items:flex-start}.topbar h2{font-size:21px}.connection{display:none}.hero{padding:19px}.hero h3{font-size:18px}.hero-art{font-size:38px}.section-head{align-items:stretch;flex-direction:column;gap:10px}.search{width:100%}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product-card{padding:13px;min-height:150px}.form-row{flex-direction:column;gap:0}th,td{padding:10px 5px;font-size:11px}.table-wrap{overflow-x:auto}}
+    .act{border:0;border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:700;font-size:12px;margin-inline-start:4px}
+    .act.edit{background:#f0edff;color:#7c5cff}.act.del{background:#fff0f1;color:#c43e4b}
+    .modal-bg{position:fixed;inset:0;background:rgba(37,48,74,.5);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+    .modal-bg.show{display:flex}.modal{background:#fff;border-radius:22px;padding:24px;width:100%;max-width:440px;max-height:92vh;overflow:auto}
+    .modal h3{margin-bottom:16px}.modal .row{display:flex;gap:10px}.modal .row>div{flex:1}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+    .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+    .stat small{color:var(--muted);font-weight:700}.stat b{display:block;font-size:22px;margin-top:6px}
+    .stat.g b{color:var(--green)}.stat.p b{color:var(--purple)}.stat.k b{color:var(--pink)}
+    .bar{background:#f0edff;border-radius:8px;height:9px;min-width:70px;overflow:hidden}.bar i{display:block;height:100%;background:var(--purple)}
+    #receipt{display:none}
+    @media print{
+     body{overflow:visible!important;background:#fff!important;min-height:0}
+     body:before{display:none!important}
+     .app,.menu-toggle,#message-box,.modal-bg{display:none!important}
+     #receipt{display:block;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
+     #receipt h2{text-align:center;font-size:22px}#receipt .c{text-align:center}
+     #receipt hr{border:0;border-top:1px dashed #000;margin:6px 0}
+     #receipt table{width:100%;font-size:12px}#receipt td{border:0;padding:2px 0;text-align:right}
+     #receipt td:last-child{text-align:left}#receipt .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
+     @page{size:80mm auto;margin:2mm}
+    }
   </style>
 </head>
 <body>
@@ -46,11 +66,11 @@
       <div class="topbar"><div><div class="eyebrow">أهلاً بك في عالم اللعب</div><h2 id="page-title">نقطة البيع</h2></div><div class="connection"><i class="dot"></i> الربط يعمل بأمان</div></div>
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
-        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
+        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button><button class="btn secondary full" id="print-btn" style="display:none;margin-top:8px" onclick="printLastReceipt()">🖨️ طباعة الفاتورة</button></div></div></div>
       </section>
       <section id="page-inventory" class="page">
         <div class="grid-two" style="grid-template-columns:1fr"><div class="card"><h3>➕ إضافة لعبة جديدة</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name" placeholder="مثال: سيارة سباق صغيرة"></div><div class="form-group"><label>الباركود / كود اللعبة</label><input id="p_barcode" placeholder="اختياري"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0" min="0" step="0.01"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0" min="0" step="0.01"></div></div><div class="form-group"><label>الكمية في المخزن *</label><input type="number" id="p_quantity" value="0" min="0" step="1" placeholder="اكتب الكمية المتاحة"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والمخزون 🎈</button></div></div>
-        <div class="card"><div class="section-head"><h3>📋 قائمة الألعاب والمخزون</h3><input class="search" id="inventory-search" oninput="renderInventoryTable()" placeholder="بحث في الأصناف..."></div><div class="table-wrap"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>الشراء</th><th>البيع</th><th>الرصيد</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div>
+        <div class="card"><div class="section-head"><h3>📋 قائمة الألعاب والمخزون</h3><input class="search" id="inventory-search" oninput="renderInventoryTable()" placeholder="بحث في الأصناف..."></div><div class="table-wrap"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>الشراء</th><th>البيع</th><th>الرصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div>
       </section>
       <section id="page-storage" class="page">
         <div class="grid-two">
@@ -80,65 +100,6 @@
       </section>
     </main>
   </div>
-  <script>
-    const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
-    const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
-    const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    let allProducts=[], stockByProduct={}, cart=[], defaultWarehouseId=null;
-    const icons=['🧸','🚗','🧩','🎨','🚂','🪁','🎲','🦄','🤖','🎸'];
-    function switchPage(page,button){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));button.classList.add('active');document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخازن المنفصلة':'التقارير';document.querySelector('.sidebar').classList.remove('show');if(page==='reports')loadReports();if(page==='storage')loadStorage()}
-    function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');clearTimeout(window.messageTimer);window.messageTimer=setTimeout(()=>box.classList.remove('show'),5000)}
-    async function init(){try{let {data,error}=await db.from('warehouses').select('id').order('id').limit(1);if(error)throw error;if(!data.length){const r=await db.from('warehouses').insert([{name:'المحل الرئيسي',code:'MAIN'}]).select().single();if(r.error)throw r.error;data=[r.data]}defaultWarehouseId=data[0].id;await loadProducts()}catch(e){showMessage('خطأ في الاتصال بقاعدة البيانات: '+e.message,true)}}
-    async function loadProducts(){try{const {data,error}=await db.from('products').select('*').order('id',{ascending:false});if(error)throw error;allProducts=data||[];await loadStock();renderInventoryTable();renderPOSProducts()}catch(e){showMessage('خطأ في تحميل الأصناف: '+e.message,true)}}
-    async function loadStock(){stockByProduct={};const {data,error}=await db.from('product_stock').select('product_id,quantity');if(error)throw error;(data||[]).forEach(row=>{stockByProduct[row.product_id]=(stockByProduct[row.product_id]||0)+Number(row.quantity||0)})}
-    async function addProduct(){const name=document.getElementById('p_name').value.trim(),quantity=Math.max(0,parseInt(document.getElementById('p_quantity').value,10)||0);if(!name)return showMessage('اكتب اسم اللعبة أولاً',true);if(!defaultWarehouseId)return showMessage('أضف مخزناً أولاً ثم احفظ اللعبة',true);try{const product={name,barcode:document.getElementById('p_barcode').value.trim()||null,default_purchase_price:parseFloat(document.getElementById('p_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('p_sale').value)||0};const {data,error}=await db.from('products').insert([product]).select().single();if(error)throw error;if(quantity>0){const result=await db.from('product_stock').insert([{product_id:data.id,warehouse_id:defaultWarehouseId,quantity}]);if(result.error)throw result.error}['p_name','p_barcode'].forEach(id=>document.getElementById(id).value='');document.getElementById('p_purchase').value='0';document.getElementById('p_sale').value='0';document.getElementById('p_quantity').value='0';showMessage('تم حفظ اللعبة والكمية بنجاح 🎉');await loadProducts()}catch(e){showMessage('تعذر حفظ اللعبة: '+e.message,true)}}
-    function renderInventoryTable(){const body=document.getElementById('inventory-table'),query=(document.getElementById('inventory-search')?.value||'').toLowerCase();const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));if(!products.length){body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد أصناف مطابقة</td></tr>';return}body.innerHTML=products.map((p,i)=>{const stock=stockByProduct[p.id]||0;return `<tr><td>${i+1}</td><td><b>${escapeHtml(p.name)}</b></td><td>${escapeHtml(p.barcode||'-')}</td><td>${money(p.default_purchase_price)}</td><td>${money(p.default_sale_price)}</td><td><span class="badge ${stock<=3?'low':''}">${stock} قطعة</span></td></tr>`}).join('')}
-    function renderPOSProducts(){const list=document.getElementById('pos-products-list'),query=(document.getElementById('pos-search')?.value||'').toLowerCase();const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));if(!products.length){list.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد لعبة بهذا الاسم</div>';return}list.innerHTML=products.map((p,i)=>{const stock=stockByProduct[p.id]||0;return `<div class="product-card" style="--accent:${["#47c6d9","#ff6f91","#ffc857","#7c5cff"][i%4]}" onclick="addToCart(${p.id})"><div><div class="toy-icon">${icons[i%icons.length]}</div><h4>${escapeHtml(p.name)}</h4><div class="price">${money(p.default_sale_price)}</div></div><div class="stock ${stock<=3?'low':''}">${stock>0?'متاح: '+stock+' قطعة':'غير متوفر'}</div></div>`}).join('')}
-    function addToCart(id){const product=allProducts.find(p=>p.id===id),stock=stockByProduct[id]||0;if(!product||stock<=0)return showMessage('هذه اللعبة غير متوفرة حالياً',true);const item=cart.find(x=>x.id===id);if(item&&item.qty>=stock)return showMessage('لا يمكن تجاوز الكمية الموجودة في المخزن',true);item?item.qty++:cart.push({...product,qty:1});renderCart()}
-    function updateQty(index,delta){const item=cart[index],stock=stockByProduct[item.id]||0;if(delta>0&&item.qty>=stock)return showMessage('الكمية المتاحة في المخزن انتهت',true);item.qty+=delta;if(item.qty<=0)cart.splice(index,1);renderCart()}
-    function renderCart(){const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total');if(!cart.length){box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';totalBox.textContent='0.00 ج.م';document.getElementById('cart-count').textContent='0 ألعاب';return}let total=0,count=0;box.innerHTML=cart.map((item,index)=>{total+=Number(item.default_sale_price)*item.qty;count+=item.qty;return `<div class="cart-item"><div><h5>${escapeHtml(item.name)}</h5><small>${money(item.default_sale_price)} × ${item.qty}</small></div><div class="controls"><button onclick="updateQty(${index},-1)">−</button><b>${item.qty}</b><button onclick="updateQty(${index},1)">+</button></div></div>`}).join('');totalBox.textContent=money(total);document.getElementById('cart-count').textContent=count+' ألعاب'}
-    function money(v){return Number(v||0).toFixed(2)+' ج.م'}
-    function escapeHtml(v){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-    async function checkout(){if(!cart.length)return showMessage('السلة فارغة',true);if(!defaultWarehouseId)return showMessage('يجب إضافة مخزن أولاً',true);try{const total=cart.reduce((s,i)=>s+Number(i.default_sale_price)*i.qty,0);const cost=cart.reduce((s,i)=>s+Number(i.default_purchase_price||0)*i.qty,0);const {data:sale,error:se}=await db.from('sales').insert([{total,cost,profit:total-cost}]).select().single();if(se)throw se;const items=cart.map(i=>({sale_id:sale.id,product_id:i.id,product_name:i.name,qty:i.qty,unit_price:Number(i.default_sale_price),unit_cost:Number(i.default_purchase_price||0)}));const r1=await db.from('sale_items').insert(items);if(r1.error)throw r1.error;for(const item of cart){const {data,error}=await db.from('product_stock').select('*').eq('product_id',item.id).eq('warehouse_id',defaultWarehouseId).single();if(error&&error.code!=='PGRST116')throw error;if(!data||Number(data.quantity)<item.qty)throw new Error('الرصيد غير كافٍ للصنف: '+item.name);const r=await db.from('product_stock').update({quantity:Number(data.quantity)-item.qty}).eq('id',data.id);if(r.error)throw r.error}cart=[];renderCart();showMessage('تم البيع بنجاح! الإجمالي: '+money(total));await loadProducts();printReceipt(sale,items)}catch(e){showMessage(e.message||'حدث خطأ أثناء البيع',true)}}
-    async function loadReports(){const box=document.getElementById('rep-body');const p=document.getElementById('rep-period').value,d=new Date();d.setHours(0,0,0,0);if(p==='week')d.setDate(d.getDate()-6);if(p==='month')d.setDate(1);try{const sales=[];for(let from=0;;from+=1000){let q=db.from('sales').select('*').order('id',{ascending:false}).range(from,from+999);if(p!=='all')q=q.gte('created_at',d.toISOString());const {data,error}=await q;if(error)throw error;sales.push(...data);if(data.length<1000)break}const items=[],ids=sales.map(s=>s.id);for(let i=0;i<ids.length;i+=100){const r=await db.from('sale_items').select('*').in('sale_id',ids.slice(i,i+100));if(r.error)throw r.error;items.push(...r.data)}const rev=sales.reduce((s,x)=>s+Number(x.total),0),cost=sales.reduce((s,x)=>s+Number(x.cost),0),profit=rev-cost,margin=rev?profit/rev*100:0,pieces=items.reduce((s,i)=>s+i.qty,0),byProd={};items.forEach(i=>{const o=byProd[i.product_name]||(byProd[i.product_name]={qty:0,rev:0,profit:0});o.qty+=i.qty;o.rev+=i.qty*i.unit_price;o.profit+=i.qty*(i.unit_price-i.unit_cost)});const top=Object.entries(byProd).sort((a,b)=>b[1].rev-a[1].rev).slice(0,10),byDay={};sales.forEach(s=>{const k=new Date(s.created_at).toLocaleDateString('ar-EG');const o=byDay[k]||(byDay[k]={n:0,rev:0,profit:0});o.n++;o.rev+=Number(s.total);o.profit+=Number(s.profit)});box.innerHTML=`<div class="stats"><div class="stat p"><small>إجمالي المبيعات</small><b>${money(rev)}</b></div><div class="stat g"><small>صافي الربح</small><b>${money(profit)}</b></div><div class="stat k"><small>نسبة الربح</small><b>${margin.toFixed(1)}%</b></div><div class="stat"><small>عدد الفواتير</small><b>${sales.length}</b></div><div class="stat"><small>القطع المباعة</small><b>${pieces}</b></div><div class="stat"><small>متوسط الفاتورة</small><b>${money(sales.length?rev/sales.length:0)}</b></div></div><div class="card"><h3>🏆 الأكثر مبيعاً</h3><div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>المبيعات</th><th>الربح</th><th>نسبة من المبيعات</th></tr></thead><tbody>${top.length?top.map(([n,o])=>{const sh=rev?o.rev/rev*100:0;return `<tr><td><b>${escapeHtml(n)}</b></td><td>${o.qty}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td><td><div class="bar"><i style="width:${sh}%"></i></div><small>${sh.toFixed(1)}%</small></td></tr>`}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد مبيعات في هذه الفترة</td></tr>'}</tbody></table></div></div><div class="card"><h3>📅 المبيعات اليومية</h3><div class="table-wrap"><table><thead><tr><th>اليوم</th><th>الفواتير</th><th>المبيعات</th><th>الربح</th></tr></thead><tbody>${Object.entries(byDay).map(([k,o])=>`<tr><td>${k}</td><td>${o.n}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا توجد بيانات</td></tr>'}</tbody></table></div></div>`}catch(e){box.innerHTML='<p style="color:var(--red)">تعذر تحميل التقارير: '+escapeHtml(e.message)+'<br>تأكد من تشغيل كود SQL الخاص بجدول sales و sale_items.</p>'}}
-    function printReceipt(sale,items){let r=document.getElementById('receipt');if(!r){r=document.createElement('div');r.id='receipt';document.body.appendChild(r)}r.innerHTML=`<h2>TREND</h2><p class="c">متجر الألعاب</p><p class="c">فاتورة رقم ${sale.id}<br>${new Date(sale.created_at||new Date()).toLocaleString('ar-EG')}</p><hr><table>${items.map(i=>`<tr><td colspan="2"><b>${escapeHtml(i.product_name)}</b></td></tr><tr><td>${i.qty} × ${Number(i.unit_price).toFixed(2)}</td><td>${(i.qty*i.unit_price).toFixed(2)}</td></tr>`).join('')}</table><hr><div class="t"><span>الإجمالي</span><span>${money(sale.total)}</span></div><hr><p class="c">شكراً لزيارتكم 🧸</p>`;setTimeout(()=>window.print(),200)}
-    async function loadStorage(){try{const {data,error}=await db.from('storage_warehouses').select('*').order('id');if(error)throw error;window.storageList=data||[];if(!window.storageList.find(w=>w.id===window.curWh))window.curWh=window.storageList[0]?.id||null;document.getElementById('sw_sel').innerHTML=window.storageList.length?window.storageList.map(w=>`<option value="${w.id}" ${w.id===window.curWh?'selected':''}>${escapeHtml(w.name)}${w.code?' ('+escapeHtml(w.code)+')':''}</option>`).join(''):'<option value="">— أنشئ مخزن أولاً —</option>';await loadStorageItems()}catch(e){showMessage('تعذر تحميل المخازن: '+e.message,true)}}
-    async function loadStorageItems(){window.sItems=[];if(window.curWh){const {data,error}=await db.from('storage_items').select('*').eq('warehouse_id',window.curWh).order('id',{ascending:false});if(error)return showMessage('تعذر تحميل أصناف المخزن: '+error.message,true);window.sItems=data||[]}renderStorageItems()}
-    function renderStorageItems(){const q=(document.getElementById('si_search').value||'').toLowerCase();const w=window.storageList?.find(x=>x.id===window.curWh);document.getElementById('si_title').textContent='📋 محتويات '+(w?w.name:'المخزن');const list=(window.sItems||[]).filter(i=>(i.name+' '+(i.note||'')).toLowerCase().includes(q));document.getElementById('si_body').innerHTML=list.length?list.map((i,n)=>`<tr><td>${n+1}</td><td><b>${escapeHtml(i.name)}</b></td><td><span class="badge ${Number(i.quantity)<=3?'low':''}">${Number(i.quantity)} قطعة</span></td><td>${escapeHtml(i.note||'-')}</td><td style="white-space:nowrap"><button class="act edit" onclick="editStorageItem(${i.id})">✏️ تعديل</button><button class="act del" onclick="deleteStorageItem(${i.id})">🗑️ حذف</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد أصناف في هذا المخزن</td></tr>'}
-    function pickStorage(){window.curWh=Number(document.getElementById('sw_sel').value)||null;loadStorageItems()}
-    async function createStorage(){const name=document.getElementById('sw_name').value.trim();if(!name)return showMessage('اكتب اسم المخزن أولاً',true);try{const {data,error}=await db.from('storage_warehouses').insert([{name,code:document.getElementById('sw_code').value.trim()||null}]).select().single();if(error)throw error;document.getElementById('sw_name').value='';document.getElementById('sw_code').value='';window.curWh=data.id;showMessage('تم إنشاء المخزن 🏬');await loadStorage()}catch(e){showMessage('تعذر إنشاء المخزن: '+e.message,true)}}
-    async function deleteStorage(){const w=window.storageList?.find(x=>x.id===window.curWh);if(!w)return;if(!confirm('هتحذف مخزن "'+w.name+'" وكل اللي فيه. متأكد؟'))return;try{let r=await db.from('storage_items').delete().eq('warehouse_id',w.id);if(r.error)throw r.error;r=await db.from('storage_warehouses').delete().eq('id',w.id);if(r.error)throw r.error;window.curWh=null;showMessage('تم حذف المخزن');await loadStorage()}catch(e){showMessage('تعذر الحذف: '+e.message,true)}}
-    async function addStorageItem(){if(!window.curWh)return showMessage('أنشئ مخزن واختاره أولاً',true);const name=document.getElementById('si_name').value.trim();if(!name)return showMessage('اكتب اسم الصنف',true);try{const r=await db.from('storage_items').insert([{warehouse_id:window.curWh,name,quantity:Math.max(0,parseInt(document.getElementById('si_qty').value,10)||0),note:document.getElementById('si_note').value.trim()||null}]);if(r.error)throw r.error;document.getElementById('si_name').value='';document.getElementById('si_qty').value='0';document.getElementById('si_note').value='';showMessage('تم التخزين 📦');await loadStorageItems()}catch(e){showMessage('تعذر الحفظ: '+e.message,true)}}
-    function editStorageItem(id){const i=window.sItems?.find(x=>x.id===id);if(!i)return;window.editingS=id;document.getElementById('se_name').value=i.name;document.getElementById('se_qty').value=Number(i.quantity);document.getElementById('se_note').value=i.note||'';document.querySelector('.modal-bg.show')?.classList.remove('show');document.body.querySelectorAll('.modal-bg')[0].classList.add('show')}
-    async function saveStorageEdit(){const name=document.getElementById('se_name').value.trim();if(!name)return showMessage('اكتب اسم الصنف',true);try{const r=await db.from('storage_items').update({name,quantity:Math.max(0,parseInt(document.getElementById('se_qty').value,10)||0),note:document.getElementById('se_note').value.trim()||null}).eq('id',window.editingS);if(r.error)throw r.error;document.body.querySelectorAll('.modal-bg')[0].classList.remove('show');showMessage('تم التعديل ✅');await loadStorageItems()}catch(e){showMessage('تعذر التعديل: '+e.message,true)}}
-    async function deleteStorageItem(id){if(!confirm('حذف الصنف من المخزن؟'))return;const r=await db.from('storage_items').delete().eq('id',id);if(r.error)return showMessage('تعذر الحذف: '+r.error.message,true);showMessage('تم الحذف 🗑️');await loadStorageItems()}
-    window.onload=init;
-    window.switchPage=switchPage;window.showMessage=showMessage;window.renderInventoryTable=renderInventoryTable;window.renderPOSProducts=renderPOSProducts;window.addToCart=addToCart;window.updateQty=updateQty;window.checkout=checkout;window.loadReports=loadReports;window.printReceipt=printReceipt;window.loadStorage=loadStorage;window.loadStorageItems=loadStorageItems;window.renderStorageItems=renderStorageItems;window.pickStorage=pickStorage;window.createStorage=createStorage;window.deleteStorage=deleteStorage;window.addStorageItem=addStorageItem;window.editStorageItem=editStorageItem;window.saveStorageEdit=saveStorageEdit;window.deleteStorageItem=deleteStorageItem;
-  </script>
-  <style>
-    .act{border:0;border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:700;font-size:12px;margin-inline-start:4px}
-    .act.edit{background:#f0edff;color:#7c5cff}.act.del{background:#fff0f1;color:#c43e4b}
-    .modal-bg{position:fixed;inset:0;background:rgba(37,48,74,.5);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
-    .modal-bg.show{display:flex}.modal{background:#fff;border-radius:22px;padding:24px;width:100%;max-width:440px;max-height:92vh;overflow:auto}
-    .modal h3{margin-bottom:16px}.modal .row{display:flex;gap:10px}.modal .row>div{flex:1}
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
-    .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
-    .stat small{color:var(--muted);font-weight:700}.stat b{display:block;font-size:22px;margin-top:6px}
-    .stat.g b{color:var(--green)}.stat.p b{color:var(--purple)}.stat.k b{color:var(--pink)}
-    .bar{background:#f0edff;border-radius:8px;height:9px;min-width:70px;overflow:hidden}.bar i{display:block;height:100%;background:var(--purple)}
-    #receipt{display:none}
-    @media print{
-     body{overflow:visible!important;background:#fff!important;min-height:0}
-     body:before{display:none!important}
-     .app,.menu-toggle,#message-box,.modal-bg{display:none!important}
-     #receipt{display:block;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
-     #receipt h2{text-align:center;font-size:22px}#receipt .c{text-align:center}
-     #receipt hr{border:0;border-top:1px dashed #000;margin:6px 0}
-     #receipt table{width:100%;font-size:12px}#receipt td{border:0;padding:2px 0;text-align:right}
-     #receipt td:last-child{text-align:left}#receipt .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
-     @page{size:80mm auto;margin:2mm}
-    }
-  </style>
   <div class="modal-bg" id="edit-modal">
     <div class="modal"><h3>✏️ تعديل الصنف</h3>
       <div class="form-group"><label>اسم الصنف *</label><input id="e_name"></div>
@@ -150,15 +111,284 @@
     </div>
   </div>
   <script>
+    const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
+    const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
+    const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    let allProducts=[], stockByProduct={}, cart=[], defaultWarehouseId=null;
+    const icons=['🧸','🚗','🧩','🎨','🚂','🪁','🎲','🦄','🤖','🎸'];
+    
+    function switchPage(page,button){
+      document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+      document.getElementById('page-'+page).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخازن المنفصلة':'التقارير';
+      document.querySelector('.sidebar').classList.remove('show');
+      if(page==='reports')loadReports();
+      if(page==='storage')loadStorage();
+    }
+    function showMessage(text,error=false){
+      const box=document.getElementById('message-box');
+      box.textContent=text;box.className='message show '+(error?'error':'success');
+      clearTimeout(window.messageTimer);window.messageTimer=setTimeout(()=>box.classList.remove('show'),5000);
+    }
+    async function init(){
+      try{
+        let {data,error}=await db.from('warehouses').select('id').order('id').limit(1);
+        if(error)throw error;
+        if(!data.length){
+          const r=await db.from('warehouses').insert([{name:'المحل الرئيسي',code:'MAIN'}]).select().single();
+          if(r.error)throw r.error;data=[r.data];
+        }
+        defaultWarehouseId=data[0].id;
+        await loadProducts();
+      }catch(e){showMessage('خطأ في الاتصال بقاعدة البيانات: '+e.message,true)}
+    }
+    async function loadProducts(){
+      try{
+        const {data,error}=await db.from('products').select('*').order('id',{ascending:false});
+        if(error)throw error;allProducts=data||[];
+        await loadStock();renderInventoryTable();renderPOSProducts();
+      }catch(e){showMessage('خطأ في تحميل الأصناف: '+e.message,true)}
+    }
+    async function loadStock(){
+      stockByProduct={};
+      const {data,error}=await db.from('product_stock').select('product_id,quantity');
+      if(error)throw error;
+      (data||[]).forEach(row=>{stockByProduct[row.product_id]=(stockByProduct[row.product_id]||0)+Number(row.quantity||0)});
+    }
+    async function addProduct(){
+      const name=document.getElementById('p_name').value.trim(),quantity=Math.max(0,parseInt(document.getElementById('p_quantity').value,10)||0);
+      if(!name)return showMessage('اكتب اسم اللعبة أولاً',true);
+      if(!defaultWarehouseId)return showMessage('أضف مخزناً أولاً ثم احفظ اللعبة',true);
+      try{
+        const product={name,barcode:document.getElementById('p_barcode').value.trim()||null,default_purchase_price:parseFloat(document.getElementById('p_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('p_sale').value)||0};
+        const {data,error}=await db.from('products').insert([product]).select().single();
+        if(error)throw error;
+        if(quantity>0){
+          const result=await db.from('product_stock').insert([{product_id:data.id,warehouse_id:defaultWarehouseId,quantity}]);
+          if(result.error)throw result.error;
+        }
+        ['p_name','p_barcode'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('p_purchase').value='0';document.getElementById('p_sale').value='0';document.getElementById('p_quantity').value='0';
+        showMessage('تم حفظ اللعبة والكمية بنجاح 🎉');await loadProducts();
+      }catch(e){showMessage('تعذر حفظ اللعبة: '+e.message,true)}
+    }
+    function renderInventoryTable(){
+      const body=document.getElementById('inventory-table'),query=(document.getElementById('inventory-search')?.value||'').toLowerCase();
+      const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));
+      if(!products.length){body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد أصناف مطابقة</td></tr>';return}
+      body.innerHTML=products.map((p,i)=>{
+        const stock=stockByProduct[p.id]||0;
+        return `<tr><td>${i+1}</td><td><b>${escapeHtml(p.name)}</b></td><td>${escapeHtml(p.barcode||'-')}</td><td>${money(p.default_purchase_price)}</td><td>${money(p.default_sale_price)}</td><td><span class="badge ${stock<=3?'low':''}">${stock} قطعة</span></td><td style="white-space:nowrap"><button class="act edit" onclick="editProduct(${p.id})">✏️ تعديل</button><button class="act del" onclick="deleteProduct(${p.id})">🗑️ حذف</button></td></tr>`;
+      }).join('');
+    }
+    function renderPOSProducts(){
+      const list=document.getElementById('pos-products-list'),query=(document.getElementById('pos-search')?.value||'').toLowerCase();
+      const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));
+      if(!products.length){list.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد لعبة بهذا الاسم</div>';return}
+      list.innerHTML=products.map((p,i)=>{
+        const stock=stockByProduct[p.id]||0;
+        return `<div class="product-card" style="--accent:${["#47c6d9","#ff6f91","#ffc857","#7c5cff"][i%4]}" onclick="addToCart(${p.id})"><div><div class="toy-icon">${icons[i%icons.length]}</div><h4>${escapeHtml(p.name)}</h4><div class="price">${money(p.default_sale_price)}</div></div><div class="stock ${stock<=3?'low':''}">${stock>0?'متاح: '+stock+' قطعة':'غير متوفر'}</div></div>`;
+      }).join('');
+    }
+    function addToCart(id){
+      const product=allProducts.find(p=>p.id===id),stock=stockByProduct[id]||0;
+      if(!product||stock<=0)return showMessage('هذه اللعبة غير متوفرة حالياً',true);
+      const item=cart.find(x=>x.id===id);
+      if(item&&item.qty>=stock)return showMessage('لا يمكن تجاوز الكمية الموجودة في المخزن',true);
+      item?item.qty++:cart.push({...product,qty:1});
+      renderCart();
+    }
+    function updateQty(index,delta){
+      const item=cart[index],stock=stockByProduct[item.id]||0;
+      if(delta>0&&item.qty>=stock)return showMessage('الكمية المتاحة في المخزن انتهت',true);
+      item.qty+=delta;if(item.qty<=0)cart.splice(index,1);renderCart();
+    }
+    function renderCart(){
+      const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total'),printBtn=document.getElementById('print-btn');
+      if(!cart.length){box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';totalBox.textContent='0.00 ج.م';document.getElementById('cart-count').textContent='0 ألعاب';printBtn.style.display='none';return}
+      let total=0,count=0;
+      box.innerHTML=cart.map((item,index)=>{
+        total+=Number(item.default_sale_price)*item.qty;count+=item.qty;
+        return `<div class="cart-item"><div><h5>${escapeHtml(item.name)}</h5><small>${money(item.default_sale_price)} × ${item.qty}</small></div><div class="controls"><button onclick="updateQty(${index},-1)">−</button><b>${item.qty}</b><button onclick="updateQty(${index},1)">+</button></div></div>`;
+      }).join('');
+      totalBox.textContent=money(total);document.getElementById('cart-count').textContent=count+' ألعاب';
+    }
+    function money(v){return Number(v||0).toFixed(2)+' ج.م'}
+    function escapeHtml(v){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+    
+    let lastReceipt=null;
+    async function checkout(){
+      if(!cart.length)return showMessage('السلة فارغة',true);
+      if(!defaultWarehouseId)return showMessage('يجب إضافة مخزن أولاً',true);
+      try{
+        const total=cart.reduce((s,i)=>s+Number(i.default_sale_price)*i.qty,0);
+        const cost=cart.reduce((s,i)=>s+Number(i.default_purchase_price||0)*i.qty,0);
+        const {data:sale,error:se}=await db.from('sales').insert([{total,cost,profit:total-cost}]).select().single();
+        if(se)throw se;
+        const items=cart.map(i=>({sale_id:sale.id,product_id:i.id,product_name:i.name,qty:i.qty,unit_price:Number(i.default_sale_price),unit_cost:Number(i.default_purchase_price||0)}));
+        const r1=await db.from('sale_items').insert(items);if(r1.error)throw r1.error;
+        for(const item of cart){
+          const {data,error}=await db.from('product_stock').select('*').eq('product_id',item.id).eq('warehouse_id',defaultWarehouseId).single();
+          if(error&&error.code!=='PGRST116')throw error;
+          if(!data||Number(data.quantity)<item.qty)throw new Error('الرصيد غير كافٍ للصنف: '+item.name);
+          const r=await db.from('product_stock').update({quantity:Number(data.quantity)-item.qty}).eq('id',data.id);
+          if(r.error)throw r.error;
+        }
+        lastReceipt={sale,items};
+        document.getElementById('print-btn').style.display='block';
+        cart=[];renderCart();
+        showMessage('تم البيع بنجاح! الإجمالي: '+money(total)+' — اضغط على "طباعة الفاتورة"');
+        await loadProducts();
+      }catch(e){showMessage(e.message||'حدث خطأ أثناء البيع',true)}
+    }
+    function printReceipt(sale,items){
+      let r=document.getElementById('receipt');
+      if(!r){r=document.createElement('div');r.id='receipt';document.body.appendChild(r)}
+      r.innerHTML=`<h2>TREND</h2><p class="c">متجر الألعاب</p><p class="c">فاتورة رقم ${sale.id}<br>${new Date(sale.created_at||new Date()).toLocaleString('ar-EG')}</p><hr><table>${items.map(i=>`<tr><td colspan="2"><b>${escapeHtml(i.product_name)}</b></td></tr><tr><td>${i.qty} × ${Number(i.unit_price).toFixed(2)}</td><td>${(i.qty*i.unit_price).toFixed(2)}</td></tr>`).join('')}</table><hr><div class="t"><span>الإجمالي</span><span>${money(sale.total)}</span></div><hr><p class="c">شكراً لزيارتكم 🧸</p>`;
+      setTimeout(()=>window.print(),200);
+    }
+    function printLastReceipt(){if(lastReceipt)printReceipt(lastReceipt.sale,lastReceipt.items)}
+    
+    async function loadReports(){
+      const box=document.getElementById('rep-body');const p=document.getElementById('rep-period').value,d=new Date();d.setHours(0,0,0,0);
+      if(p==='week')d.setDate(d.getDate()-6);if(p==='month')d.setDate(1);
+      try{
+        const sales=[];
+        for(let from=0;;from+=1000){
+          let q=db.from('sales').select('*').order('id',{ascending:false}).range(from,from+999);
+          if(p!=='all')q=q.gte('created_at',d.toISOString());
+          const {data,error}=await q;if(error)throw error;sales.push(...data);if(data.length<1000)break;
+        }
+        const items=[],ids=sales.map(s=>s.id);
+        for(let i=0;i<ids.length;i+=100){
+          const r=await db.from('sale_items').select('*').in('sale_id',ids.slice(i,i+100));
+          if(r.error)throw r.error;items.push(...r.data);
+        }
+        const rev=sales.reduce((s,x)=>s+Number(x.total),0),cost=sales.reduce((s,x)=>s+Number(x.cost),0),profit=rev-cost,margin=rev?profit/rev*100:0,pieces=items.reduce((s,i)=>s+i.qty,0),byProd={};
+        items.forEach(i=>{const o=byProd[i.product_name]||(byProd[i.product_name]={qty:0,rev:0,profit:0});o.qty+=i.qty;o.rev+=i.qty*i.unit_price;o.profit+=i.qty*(i.unit_price-i.unit_cost)});
+        const top=Object.entries(byProd).sort((a,b)=>b[1].rev-a[1].rev).slice(0,10),byDay={};
+        sales.forEach(s=>{const k=new Date(s.created_at).toLocaleDateString('ar-EG');const o=byDay[k]||(byDay[k]={n:0,rev:0,profit:0});o.n++;o.rev+=Number(s.total);o.profit+=Number(s.profit)});
+        box.innerHTML=`<div class="stats"><div class="stat p"><small>إجمالي المبيعات</small><b>${money(rev)}</b></div><div class="stat g"><small>صافي الربح</small><b>${money(profit)}</b></div><div class="stat k"><small>نسبة الربح</small><b>${margin.toFixed(1)}%</b></div><div class="stat"><small>عدد الفواتير</small><b>${sales.length}</b></div><div class="stat"><small>القطع المباعة</small><b>${pieces}</b></div><div class="stat"><small>متوسط الفاتورة</small><b>${money(sales.length?rev/sales.length:0)}</b></div></div><div class="card"><h3>🏆 الأكثر مبيعاً</h3><div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>المبيعات</th><th>الربح</th><th>نسبة من المبيعات</th></tr></thead><tbody>${top.length?top.map(([n,o])=>{const sh=rev?o.rev/rev*100:0;return `<tr><td><b>${escapeHtml(n)}</b></td><td>${o.qty}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td><td><div class="bar"><i style="width:${sh}%"></i></div><small>${sh.toFixed(1)}%</small></td></tr>`}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد مبيعات في هذه الفترة</td></tr>'}</tbody></table></div></div><div class="card"><h3>📅 المبيعات اليومية</h3><div class="table-wrap"><table><thead><tr><th>اليوم</th><th>الفواتير</th><th>المبيعات</th><th>الربح</th></tr></thead><tbody>${Object.entries(byDay).map(([k,o])=>`<tr><td>${k}</td><td>${o.n}</td><td>${money(o.rev)}</td><td>${money(o.profit)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا توجد بيانات</td></tr>'}</tbody></table></div></div>`;
+      }catch(e){box.innerHTML='<p style="color:var(--red)">تعذر تحميل التقارير: '+escapeHtml(e.message)+'<br>تأكد من تشغيل كود SQL الخاص بجدول sales و sale_items.</p>'}
+    }
+    
+    let storageList=[],curWh=null,sItems=[],editingS=null;
+    async function loadStorage(){
+      try{
+        const {data,error}=await db.from('storage_warehouses').select('*').order('id');if(error)throw error;
+        storageList=data||[];
+        if(!storageList.find(w=>w.id===curWh))curWh=storageList[0]?.id||null;
+        document.getElementById('sw_sel').innerHTML=storageList.length?storageList.map(w=>`<option value="${w.id}" ${w.id===curWh?'selected':''}>${escapeHtml(w.name)}${w.code?' ('+escapeHtml(w.code)+')':''}</option>`).join(''):'<option value="">— أنشئ مخزن أولاً —</option>';
+        await loadStorageItems();
+      }catch(e){showMessage('تعذر تحميل المخازن: '+e.message,true)}
+    }
+    async function loadStorageItems(){
+      sItems=[];
+      if(curWh){
+        const {data,error}=await db.from('storage_items').select('*').eq('warehouse_id',curWh).order('id',{ascending:false});
+        if(error)return showMessage('تعذر تحميل أصناف المخزن: '+error.message,true);
+        sItems=data||[];
+      }
+      renderStorageItems();
+    }
+    function renderStorageItems(){
+      const q=(document.getElementById('si_search').value||'').toLowerCase();
+      const w=storageList.find(x=>x.id===curWh);
+      document.getElementById('si_title').textContent='📋 محتويات '+(w?w.name:'المخزن');
+      const list=sItems.filter(i=>(i.name+' '+(i.note||'')).toLowerCase().includes(q));
+      document.getElementById('si_body').innerHTML=list.length?list.map((i,n)=>`<tr><td>${n+1}</td><td><b>${escapeHtml(i.name)}</b></td><td><span class="badge ${Number(i.quantity)<=3?'low':''}">${Number(i.quantity)} قطعة</span></td><td>${escapeHtml(i.note||'-')}</td><td style="white-space:nowrap"><button class="act edit" onclick="editStorageItem(${i.id})">✏️ تعديل</button><button class="act del" onclick="deleteStorageItem(${i.id})">🗑️ حذف</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد أصناف في هذا المخزن</td></tr>';
+    }
+    function pickStorage(){curWh=Number(document.getElementById('sw_sel').value)||null;loadStorageItems()}
+    async function createStorage(){
+      const name=document.getElementById('sw_name').value.trim();
+      if(!name)return showMessage('اكتب اسم المخزن أولاً',true);
+      try{
+        const {data,error}=await db.from('storage_warehouses').insert([{name,code:document.getElementById('sw_code').value.trim()||null}]).select().single();
+        if(error)throw error;
+        document.getElementById('sw_name').value='';document.getElementById('sw_code').value='';curWh=data.id;
+        showMessage('تم إنشاء المخزن 🏬');await loadStorage();
+      }catch(e){showMessage('تعذر إنشاء المخزن: '+e.message,true)}
+    }
+    async function deleteStorage(){
+      const w=storageList.find(x=>x.id===curWh);if(!w)return;
+      if(!confirm('هتحذف مخزن "'+w.name+'" وكل اللي فيه. متأكد؟'))return;
+      try{
+        let r=await db.from('storage_items').delete().eq('warehouse_id',w.id);if(r.error)throw r.error;
+        r=await db.from('storage_warehouses').delete().eq('id',w.id);if(r.error)throw r.error;
+        curWh=null;showMessage('تم حذف المخزن');await loadStorage();
+      }catch(e){showMessage('تعذر الحذف: '+e.message,true)}
+    }
+    async function addStorageItem(){
+      if(!curWh)return showMessage('أنشئ مخزن واختاره أولاً',true);
+      const name=document.getElementById('si_name').value.trim();
+      if(!name)return showMessage('اكتب اسم الصنف',true);
+      try{
+        const r=await db.from('storage_items').insert([{warehouse_id:curWh,name,quantity:Math.max(0,parseInt(document.getElementById('si_qty').value,10)||0),note:document.getElementById('si_note').value.trim()||null}]);
+        if(r.error)throw r.error;
+        document.getElementById('si_name').value='';document.getElementById('si_qty').value='0';document.getElementById('si_note').value='';
+        showMessage('تم التخزين 📦');await loadStorageItems();
+      }catch(e){showMessage('تعذر الحفظ: '+e.message,true)}
+    }
+    function editStorageItem(id){
+      const i=sItems.find(x=>x.id===id);if(!i)return;
+      editingS=id;document.getElementById('se_name').value=i.name;document.getElementById('se_qty').value=Number(i.quantity);document.getElementById('se_note').value=i.note||'';
+      document.getElementById('edit-modal').classList.add('show');
+    }
+    async function saveStorageEdit(){
+      const name=document.getElementById('se_name').value.trim();
+      if(!name)return showMessage('اكتب اسم الصنف',true);
+      try{
+        const r=await db.from('storage_items').update({name,quantity:Math.max(0,parseInt(document.getElementById('se_qty').value,10)||0),note:document.getElementById('se_note').value.trim()||null}).eq('id',editingS);
+        if(r.error)throw r.error;
+        document.getElementById('edit-modal').classList.remove('show');showMessage('تم التعديل ✅');await loadStorageItems();
+      }catch(e){showMessage('تعذر التعديل: '+e.message,true)}
+    }
+    async function deleteStorageItem(id){
+      if(!confirm('حذف الصنف من المخزن؟'))return;
+      const r=await db.from('storage_items').delete().eq('id',id);
+      if(r.error)return showMessage('تعذر الحذف: '+r.error.message,true);
+      showMessage('تم الحذف 🗑️');await loadStorageItems();
+    }
+    
     let editingId=null;
     function closeEdit(){document.getElementById('edit-modal').classList.remove('show')}
-    async function editProduct(id){const p=allProducts.find(x=>x.id===id);if(!p)return;editingId=id;document.getElementById('e_name').value=p.name;document.getElementById('e_barcode').value=p.barcode||'';document.getElementById('e_purchase').value=p.default_purchase_price||0;document.getElementById('e_sale').value=p.default_sale_price||0;let q=stockByProduct[id]||0;if(defaultWarehouseId){const {data}=await db.from('product_stock').select('quantity').eq('product_id',id).eq('warehouse_id',defaultWarehouseId).maybeSingle();if(data)q=Number(data.quantity)}document.getElementById('e_qty').value=q;document.getElementById('edit-modal').classList.add('show')}
-    async function saveEdit(){const name=document.getElementById('e_name').value.trim();if(!name)return showMessage('اكتب اسم الصنف',true);const qty=Math.max(0,parseInt(document.getElementById('e_qty').value,10)||0);try{let r=await db.from('products').update({name,barcode:document.getElementById('e_barcode').value.trim()||null,default_purchase_price:parseFloat(document.getElementById('e_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('e_sale').value)||0}).eq('id',editingId);if(r.error)throw r.error;if(defaultWarehouseId){const {data}=await db.from('product_stock').select('id').eq('product_id',editingId).eq('warehouse_id',defaultWarehouseId).maybeSingle();r=data?await db.from('product_stock').update({quantity:qty}).eq('id',data.id):await db.from('product_stock').insert([{product_id:editingId,warehouse_id:defaultWarehouseId,quantity:qty}]);if(r.error)throw r.error}closeEdit();showMessage('تم تعديل الصنف ✅');await loadProducts()}catch(e){showMessage('تعذر التعديل: '+e.message,true)}}
-    async function deleteProduct(id){const p=allProducts.find(x=>x.id===id);if(!p)return;if(!confirm('هتحذف "'+p.name+'" نهائياً مع رصيده. متأكد؟'))return;try{let r=await db.from('product_stock').delete().eq('product_id',id);if(r.error)throw r.error;r=await db.from('products').delete().eq('id',id);if(r.error)throw r.error;cart=cart.filter(x=>x.id!==id);renderCart();showMessage('تم حذف الصنف 🗑️');await loadProducts()}catch(e){showMessage('تعذر الحذف: '+e.message,true)}}
-    const headRow=document.getElementById('inventory-table').closest('table').querySelector('thead tr');headRow.insertAdjacentHTML('beforeend','<th>إجراءات</th>');
-    const _renderInventoryTable=renderInventoryTable;
-    renderInventoryTable=function(){const body=document.getElementById('inventory-table'),q=(document.getElementById('inventory-search')?.value||'').toLowerCase();const list=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(q));if(!list.length){body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد أصناف مطابقة</td></tr>';return}body.innerHTML=list.map((p,i)=>{const s=stockByProduct[p.id]||0;return `<tr><td>${i+1}</td><td><b>${escapeHtml(p.name)}</b></td><td>${escapeHtml(p.barcode||'-')}</td><td>${money(p.default_purchase_price)}</td><td>${money(p.default_sale_price)}</td><td><span class="badge ${s<=3?'low':''}">${s} قطعة</span></td><td style="white-space:nowrap"><button class="act edit" onclick="editProduct(${p.id})">✏️ تعديل</button><button class="act del" onclick="deleteProduct(${p.id})">🗑️ حذف</button></td></tr>`}).join('')};
-    window.editProduct=editProduct;window.deleteProduct=deleteProduct;window.saveEdit=saveEdit;window.closeEdit=closeEdit;
+    async function editProduct(id){
+      const p=allProducts.find(x=>x.id===id);if(!p)return;editingId=id;
+      document.getElementById('e_name').value=p.name;document.getElementById('e_barcode').value=p.barcode||'';
+      document.getElementById('e_purchase').value=p.default_purchase_price||0;document.getElementById('e_sale').value=p.default_sale_price||0;
+      let q=stockByProduct[id]||0;
+      if(defaultWarehouseId){
+        const {data}=await db.from('product_stock').select('quantity').eq('product_id',id).eq('warehouse_id',defaultWarehouseId).maybeSingle();
+        if(data)q=Number(data.quantity);
+      }
+      document.getElementById('e_qty').value=q;document.getElementById('edit-modal').classList.add('show');
+    }
+    async function saveEdit(){
+      const name=document.getElementById('e_name').value.trim();
+      if(!name)return showMessage('اكتب اسم الصنف',true);
+      const qty=Math.max(0,parseInt(document.getElementById('e_qty').value,10)||0);
+      try{
+        let r=await db.from('products').update({name,barcode:document.getElementById('e_barcode').value.trim()||null,default_purchase_price:parseFloat(document.getElementById('e_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('e_sale').value)||0}).eq('id',editingId);
+        if(r.error)throw r.error;
+        if(defaultWarehouseId){
+          const {data}=await db.from('product_stock').select('id').eq('product_id',editingId).eq('warehouse_id',defaultWarehouseId).maybeSingle();
+          r=data?await db.from('product_stock').update({quantity:qty}).eq('id',data.id):await db.from('product_stock').insert([{product_id:editingId,warehouse_id:defaultWarehouseId,quantity:qty}]);
+          if(r.error)throw r.error;
+        }
+        closeEdit();showMessage('تم تعديل الصنف ✅');await loadProducts();
+      }catch(e){showMessage('تعذر التعديل: '+e.message,true)}
+    }
+    async function deleteProduct(id){
+      const p=allProducts.find(x=>x.id===id);if(!p)return;
+      if(!confirm('هتحذف "'+p.name+'" نهائياً مع رصيده. متأكد؟'))return;
+      try{
+        let r=await db.from('product_stock').delete().eq('product_id',id);if(r.error)throw r.error;
+        r=await db.from('products').delete().eq('id',id);if(r.error)throw r.error;
+        cart=cart.filter(x=>x.id!==id);renderCart();showMessage('تم حذف الصنف 🗑️');await loadProducts();
+      }catch(e){showMessage('تعذر الحذف: '+e.message,true)}
+    }
     window.onload=init;
   </script>
 </body>
