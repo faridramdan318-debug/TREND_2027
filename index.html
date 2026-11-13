@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}
@@ -38,7 +39,6 @@
     .stat.g b{color:var(--green)}.stat.p b{color:var(--purple)}.stat.k b{color:var(--pink)}
     .bar{background:#f0edff;border-radius:8px;height:9px;min-width:70px;overflow:hidden}.bar i{display:block;height:100%;background:var(--purple)}
     
-    /* نافذة الفاتورة */
     .receipt-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
     .receipt-modal.show{display:flex}
     .receipt-box{background:#fff;padding:20px;border-radius:16px;width:100%;max-width:340px;direction:rtl}
@@ -56,6 +56,15 @@
     .barcode-label b{display:block;margin-bottom:4px}
     .barcode-label img{max-width:100%;height:auto}
     .barcode-label small{display:block;font-family:monospace;margin-top:4px;letter-spacing:1px}
+
+    .print-label {
+      width: 50mm; height: 30mm; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1.5mm; box-sizing: border-box; font-family: 'Cairo', sans-serif; direction: rtl; border: 1px solid #ddd; margin: 0 auto;
+    }
+    .print-label .brand-name { font-size: 11px; font-weight: 800; color: var(--purple); letter-spacing: 1px; line-height: 1; margin-bottom: 1mm; }
+    .print-label .product-name { font-size: 10px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; line-height: 1.2; }
+    .print-label .product-price { font-size: 11px; font-weight: 800; color: var(--pink); line-height: 1; margin: 0.5mm 0; }
+    .print-label .barcode-svg { width: 42mm; height: 8mm; }
+    .print-label .barcode-text { font-size: 8px; font-family: monospace; color: #333; letter-spacing: 1px; margin-top: 0.5mm; line-height: 1; }
   </style>
 </head>
 <body>
@@ -129,16 +138,22 @@
   </div>
 
   <div class="modal-bg" id="barcode-modal">
-    <div class="modal" style="max-width:600px">
-      <h3>🖨️ طباعة الباركود</h3>
+    <div class="modal" style="max-width:650px">
+      <h3>🏷️ طباعة الباركود</h3>
       <div style="display:flex;gap:10px;margin-bottom:16px">
         <input type="number" id="bc-qty" value="1" min="1" style="width:100px">
         <button class="btn" onclick="generateBarcodes()">توليد الملصقات</button>
       </div>
-      <div id="barcode-grid" class="barcode-grid"></div>
-      <div style="margin-top:16px;text-align:left"><button class="btn secondary" onclick="printBarcodes()">🖨️ طباعة الملصقات</button></div>
+      <div id="barcode-grid" class="barcode-grid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px"></div>
+      <div style="margin-top:16px;text-align:left;display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn secondary" onclick="document.getElementById('barcode-modal').classList.remove('show')">إغلاق</button>
+        <button class="btn" id="download-btn" onclick="downloadBarcodes()">📥 تحميل الملصق كصورة</button>
+        <button class="btn" onclick="printBarcodes()">🖨️ طباعة الملصقات</button>
+      </div>
     </div>
   </div>
+
+  <div id="print-area" style="display:none"></div>
 
   <script>
     const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
@@ -449,19 +464,86 @@
       generateBarcodes();
       document.getElementById('barcode-modal').classList.add('show');
     }
+
+    function createLabelHTML(p, qty = 1) {
+      let html = '';
+      for (let i = 0; i < qty; i++) {
+        html += `
+          <div class="print-label" id="label-${i}">
+            <div class="brand-name">TREND</div>
+            <div class="product-name">${escapeHtml(p.name)}</div>
+            <div class="product-price">${money(p.default_sale_price)}</div>
+            <svg class="barcode-svg" data-barcode="${escapeHtml(p.barcode)}"></svg>
+            <div class="barcode-text">${escapeHtml(p.barcode)}</div>
+          </div>
+        `;
+      }
+      return html;
+    }
+
     function generateBarcodes() {
       const p = allProducts.find(x => x.id === printingProductId);
       if (!p) return;
       const qty = parseInt(document.getElementById('bc-qty').value, 10) || 1;
       const grid = document.getElementById('barcode-grid');
-      grid.innerHTML = '';
+      grid.innerHTML = createLabelHTML(p, qty);
+      
+      grid.querySelectorAll('.barcode-svg').forEach(svg => {
+        JsBarcode(svg, svg.dataset.barcode, { format: "CODE128", displayValue: false, height: 30, width: 1.5, margin: 0 });
+      });
+    }
+    
+    async function downloadBarcodes() {
+      const p = allProducts.find(x => x.id === printingProductId);
+      if (!p) return;
+      const qty = parseInt(document.getElementById('bc-qty').value, 10) || 1;
+      
+      const btn = document.getElementById('download-btn');
+      const oldText = btn.textContent;
+      btn.textContent = '⏳ جاري التحميل...';
+      btn.disabled = true;
+
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.style.width = '50mm';
+      container.style.height = `${qty * 30}mm`;
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '0'; 
+      container.style.margin = '0';
+      container.style.padding = '0';
+      
+      let labelsHtml = '';
       for (let i = 0; i < qty; i++) {
-        const div = document.createElement('div');
-        div.className = 'barcode-label';
-        div.innerHTML = `<b>${escapeHtml(p.name)}</b><svg class="barcode-svg"></svg><small>${escapeHtml(p.barcode || '')}</small>`;
-        grid.appendChild(div);
-        JsBarcode(div.querySelector('svg'), p.barcode, { format: "CODE128", displayValue: false, height: 40 });
+        labelsHtml += `
+          <div class="print-label" style="margin:0; border:none; border-bottom: 1px dashed #ccc;">
+            <div class="brand-name">TREND</div>
+            <div class="product-name">${escapeHtml(p.name)}</div>
+            <div class="product-price">${money(p.default_sale_price)}</div>
+            <svg class="barcode-svg" data-barcode="${escapeHtml(p.barcode)}"></svg>
+            <div class="barcode-text">${escapeHtml(p.barcode)}</div>
+          </div>
+        `;
       }
+      container.innerHTML = labelsHtml;
+      document.body.appendChild(container);
+
+      container.querySelectorAll('.barcode-svg').forEach(svg => {
+        JsBarcode(svg, svg.dataset.barcode, { format: "CODE128", displayValue: false, height: 30, width: 1.5, margin: 0 });
+      });
+
+      const canvas = await html2canvas(container, { scale: 4 });
+      const link = document.createElement('a');
+      link.download = `TREND-Barcodes-${p.name}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      document.body.removeChild(container);
+      btn.textContent = oldText;
+      btn.disabled = false;
+      showMessage('تم تحميل الملصقات كصورة واحدة بنجاح!');
     }
     
     function printBarcodes() {
@@ -473,7 +555,9 @@
       for (let i = 0; i < qty; i++) {
         labelsHtml += `
           <div class="label">
-            <div class="name">${escapeHtml(p.name)}</div>
+            <div class="brand-name">TREND</div>
+            <div class="product-name">${escapeHtml(p.name)}</div>
+            <div class="product-price">${money(p.default_sale_price)}</div>
             <svg class="barcode"></svg>
             <div class="code">${escapeHtml(p.barcode || '')}</div>
           </div>`;
@@ -486,17 +570,19 @@
         <style>
           @page { size: 50mm 30mm; margin: 0; }
           body { margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-          .label { width: 50mm; height: 30mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; box-sizing: border-box; padding: 1mm; text-align: center; }
+          .label { width: 50mm; height: 30mm; display: flex; flex-direction: column; align-items: center; justify-content: space-between; page-break-after: always; box-sizing: border-box; padding: 1.5mm; text-align: center; }
           .label:last-child { page-break-after: auto; }
-          .name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-          .barcode { width: 45mm; height: 15mm; margin-top: 1mm; }
-          .code { font-size: 9px; font-family: monospace; margin-top: 1mm; }
+          .brand-name { font-size: 11px; font-weight: 800; color: #7c5cff; letter-spacing: 1px; line-height: 1; margin-bottom: 1mm; }
+          .product-name { font-size: 10px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; line-height: 1.2; }
+          .product-price { font-size: 11px; font-weight: 800; color: #ff6f91; line-height: 1; margin: 0.5mm 0; }
+          .barcode { width: 42mm; height: 8mm; }
+          .code { font-size: 8px; font-family: monospace; color: #333; letter-spacing: 1px; margin-top: 0.5mm; line-height: 1; }
         </style>
         </head><body>
         ${labelsHtml}
         <script>
           document.querySelectorAll('.barcode').forEach(svg => {
-            JsBarcode(svg, "${p.barcode}", { format: "CODE128", displayValue: false, height: 30, width: 1.5 });
+            JsBarcode(svg, "${p.barcode}", { format: "CODE128", displayValue: false, height: 30, width: 1.5, margin: 0 });
           });
           setTimeout(() => { window.print(); window.close(); }, 300);
         <\/script>
@@ -538,6 +624,7 @@
     window.openBarcodePrint=openBarcodePrint;
     window.generateBarcodes=generateBarcodes;
     window.printBarcodes=printBarcodes;
+    window.downloadBarcodes=downloadBarcodes;
     window.loadReports=loadReports;
     window.createStorage=createStorage;
     window.pickStorage=pickStorage;
