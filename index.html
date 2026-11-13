@@ -56,69 +56,6 @@
     .barcode-label b{display:block;margin-bottom:4px}
     .barcode-label img{max-width:100%;height:auto}
     .barcode-label small{display:block;font-family:monospace;margin-top:4px;letter-spacing:1px}
-
-    @media print{
-     body{overflow:visible!important;background:#fff!important;min-height:0}
-     body:before{display:none!important}
-     .app,.menu-toggle,#message-box,.modal-bg,.receipt-modal,.barcode-grid{display:none!important}
-     
-     /* إعدادات الفاتورة الحرارية */
-     #receipt-print{display:block!important;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
-     #receipt-print h2{text-align:center;font-size:22px}
-     #receipt-print .c{text-align:center}
-     #receipt-print hr{border:0;border-top:1px dashed #000;margin:6px 0}
-     #receipt-print table{width:100%;font-size:12px}
-     #receipt-print td{border:0;padding:2px 0;text-align:right}
-     #receipt-print td:last-child{text-align:left}
-     #receipt-print .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
-     @page{size:80mm auto;margin:2mm}
-    }
-
-    /* إعدادات خاصة لطباعة ملصقات الباركود 50x30 */
-    @media print {
-      body.printing-barcodes {
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-      body.printing-barcodes .app,
-      body.printing-barcodes .modal-bg,
-      body.printing-barcodes .receipt-modal {
-        display: none !important;
-      }
-      body.printing-barcodes #barcode-print-area {
-        display: block !important;
-      }
-      @page {
-        size: 50mm 30mm;
-        margin: 0;
-      }
-    }
-    #barcode-print-area {
-      display: none;
-      width: 50mm;
-      height: 30mm;
-      text-align: center;
-      font-family: 'Cairo', sans-serif;
-      direction: rtl;
-    }
-    #barcode-print-area .bc-name {
-      font-size: 9px;
-      font-weight: 800;
-      margin-top: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #barcode-print-area .bc-svg {
-      width: 45mm;
-      height: 15mm;
-      margin-top: 1mm;
-    }
-    #barcode-print-area .bc-code {
-      font-size: 8px;
-      font-family: monospace;
-      margin-top: 1mm;
-    }
   </style>
 </head>
 <body>
@@ -190,7 +127,6 @@
       <button class="btn secondary full" onclick="closeReceipt()">إغلاق</button>
     </div>
   </div>
-  <div id="receipt-print" style="display:none"></div>
 
   <div class="modal-bg" id="barcode-modal">
     <div class="modal" style="max-width:600px">
@@ -202,13 +138,6 @@
       <div id="barcode-grid" class="barcode-grid"></div>
       <div style="margin-top:16px;text-align:left"><button class="btn secondary" onclick="printBarcodes()">🖨️ طباعة الملصقات</button></div>
     </div>
-  </div>
-
-  <!-- منطقة الطباعة المخفية للملصق 50x30 -->
-  <div id="barcode-print-area">
-    <div class="bc-name"></div>
-    <svg class="bc-svg"></svg>
-    <div class="bc-code"></div>
   </div>
 
   <script>
@@ -349,10 +278,28 @@
       document.getElementById('receipt-modal').classList.add('show');
     }
     function closeReceipt() { document.getElementById('receipt-modal').classList.remove('show'); }
+    
     function doPrint() {
       if(!lastReceipt) return;
-      document.getElementById('receipt-print').innerHTML = buildReceipt(lastReceipt.sale, lastReceipt.items);
-      setTimeout(()=>window.print(), 100);
+      const html = buildReceipt(lastReceipt.sale, lastReceipt.items);
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html dir="rtl"><head><title>طباعة فاتورة</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { font-family: 'Cairo', sans-serif; width: 72mm; margin: 0 auto; padding: 2mm; text-align: right; color: #000; }
+          h2 { text-align: center; font-size: 22px; margin: 0 0 5px; }
+          .c { text-align: center; font-size: 12px; margin-bottom: 10px; }
+          hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+          table { width: 100%; font-size: 12px; border-collapse: collapse; }
+          td { border: 0; padding: 2px 0; text-align: right; }
+          td:last-child { text-align: left; }
+          .t { font-size: 16px; font-weight: 800; display: flex; justify-content: space-between; }
+        </style>
+        </head><body>${html}</body></html>
+      `);
+      w.document.close();
+      setTimeout(() => { w.print(); w.close(); }, 250);
     }
     
     async function checkout(){
@@ -508,16 +455,6 @@
       const qty = parseInt(document.getElementById('bc-qty').value, 10) || 1;
       const grid = document.getElementById('barcode-grid');
       grid.innerHTML = '';
-      
-      // إعداد منطقة الطباعة المخفية (نأخذ أول واحد فقط للطباعة على المقاس الصغير)
-      const printArea = document.getElementById('barcode-print-area');
-      printArea.querySelector('.bc-name').textContent = p.name;
-      printArea.querySelector('.bc-code').textContent = p.barcode;
-      
-      const svgPrint = printArea.querySelector('.bc-svg');
-      JsBarcode(svgPrint, p.barcode, { format: "CODE128", displayValue: false, height: 40, width: 2 });
-
-      // عرض الملصقات للمعاينة فقط
       for (let i = 0; i < qty; i++) {
         const div = document.createElement('div');
         div.className = 'barcode-label';
@@ -528,15 +465,44 @@
     }
     
     function printBarcodes() {
-      // نضيف كلاس للجسم عشان نخفي كل حاجة ونظهر الملصق المخفي بس
-      document.body.classList.add('printing-barcodes');
+      const p = allProducts.find(x => x.id === printingProductId);
+      if (!p) return;
+      const qty = parseInt(document.getElementById('bc-qty').value, 10) || 1;
       
-      // نستخدم setTimeout عشان نضمن إن المتصفح طبق الـ CSS قبل الطباعة
-      setTimeout(() => {
-        window.print();
-        // بعد ما يخلص الطباعة (أو يقفلها)، نشيل الكلاس عشان الموقع يرجع طبيعي
-        document.body.classList.remove('printing-barcodes');
-      }, 100);
+      let labelsHtml = '';
+      for (let i = 0; i < qty; i++) {
+        labelsHtml += `
+          <div class="label">
+            <div class="name">${escapeHtml(p.name)}</div>
+            <svg class="barcode"></svg>
+            <div class="code">${escapeHtml(p.barcode || '')}</div>
+          </div>`;
+      }
+      
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html dir="rtl"><head><title>طباعة باركود</title>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+        <style>
+          @page { size: 50mm 30mm; margin: 0; }
+          body { margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+          .label { width: 50mm; height: 30mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; box-sizing: border-box; padding: 1mm; text-align: center; }
+          .label:last-child { page-break-after: auto; }
+          .name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+          .barcode { width: 45mm; height: 15mm; margin-top: 1mm; }
+          .code { font-size: 9px; font-family: monospace; margin-top: 1mm; }
+        </style>
+        </head><body>
+        ${labelsHtml}
+        <script>
+          document.querySelectorAll('.barcode').forEach(svg => {
+            JsBarcode(svg, "${p.barcode}", { format: "CODE128", displayValue: false, height: 30, width: 1.5 });
+          });
+          setTimeout(() => { window.print(); window.close(); }, 300);
+        <\/script>
+        </body></html>
+      `);
+      w.document.close();
     }
 
     async function loadReports(){
