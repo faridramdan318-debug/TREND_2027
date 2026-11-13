@@ -6,6 +6,7 @@
   <title>TREND | نظام إدارة محل الألعاب</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}
@@ -155,7 +156,6 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script>
     const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
     const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
@@ -470,7 +470,7 @@
       setTimeout(() => { w.print(); w.close(); }, 250);
     }
 
-    function loadReports(){
+    async function loadReports(){
       const box=document.getElementById('rep-body');const p=document.getElementById('rep-period').value,d=new Date();d.setHours(0,0,0,0);
       if(p==='week')d.setDate(d.getDate()-6);if(p==='month')d.setDate(1);
       try{
