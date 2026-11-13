@@ -61,6 +61,8 @@
      body{overflow:visible!important;background:#fff!important;min-height:0}
      body:before{display:none!important}
      .app,.menu-toggle,#message-box,.modal-bg,.receipt-modal,.barcode-grid{display:none!important}
+     
+     /* إعدادات الفاتورة الحرارية */
      #receipt-print{display:block!important;width:72mm;margin:0 auto;color:#000;font-size:12px;direction:rtl;font-family:'Cairo',sans-serif}
      #receipt-print h2{text-align:center;font-size:22px}
      #receipt-print .c{text-align:center}
@@ -70,6 +72,52 @@
      #receipt-print td:last-child{text-align:left}
      #receipt-print .t{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
      @page{size:80mm auto;margin:2mm}
+    }
+
+    /* إعدادات خاصة لطباعة ملصقات الباركود 50x30 */
+    @media print {
+      body.printing-barcodes {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      body.printing-barcodes .app,
+      body.printing-barcodes .modal-bg,
+      body.printing-barcodes .receipt-modal {
+        display: none !important;
+      }
+      body.printing-barcodes #barcode-print-area {
+        display: block !important;
+      }
+      @page {
+        size: 50mm 30mm;
+        margin: 0;
+      }
+    }
+    #barcode-print-area {
+      display: none;
+      width: 50mm;
+      height: 30mm;
+      text-align: center;
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+    }
+    #barcode-print-area .bc-name {
+      font-size: 9px;
+      font-weight: 800;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #barcode-print-area .bc-svg {
+      width: 45mm;
+      height: 15mm;
+      margin-top: 1mm;
+    }
+    #barcode-print-area .bc-code {
+      font-size: 8px;
+      font-family: monospace;
+      margin-top: 1mm;
     }
   </style>
 </head>
@@ -154,6 +202,13 @@
       <div id="barcode-grid" class="barcode-grid"></div>
       <div style="margin-top:16px;text-align:left"><button class="btn secondary" onclick="printBarcodes()">🖨️ طباعة الملصقات</button></div>
     </div>
+  </div>
+
+  <!-- منطقة الطباعة المخفية للملصق 50x30 -->
+  <div id="barcode-print-area">
+    <div class="bc-name"></div>
+    <svg class="bc-svg"></svg>
+    <div class="bc-code"></div>
   </div>
 
   <script>
@@ -453,6 +508,16 @@
       const qty = parseInt(document.getElementById('bc-qty').value, 10) || 1;
       const grid = document.getElementById('barcode-grid');
       grid.innerHTML = '';
+      
+      // إعداد منطقة الطباعة المخفية (نأخذ أول واحد فقط للطباعة على المقاس الصغير)
+      const printArea = document.getElementById('barcode-print-area');
+      printArea.querySelector('.bc-name').textContent = p.name;
+      printArea.querySelector('.bc-code').textContent = p.barcode;
+      
+      const svgPrint = printArea.querySelector('.bc-svg');
+      JsBarcode(svgPrint, p.barcode, { format: "CODE128", displayValue: false, height: 40, width: 2 });
+
+      // عرض الملصقات للمعاينة فقط
       for (let i = 0; i < qty; i++) {
         const div = document.createElement('div');
         div.className = 'barcode-label';
@@ -461,13 +526,17 @@
         JsBarcode(div.querySelector('svg'), p.barcode, { format: "CODE128", displayValue: false, height: 40 });
       }
     }
+    
     function printBarcodes() {
-      const w = window.open('', '_blank');
-      w.document.write('<html><head><title>طباعة باركود</title><style>body{font-family:sans-serif;text-align:center}.barcode-label{border:1px dashed #ccc;padding:10px;margin:10px;display:inline-block;width:120px;font-size:12px}.barcode-label svg{max-width:100%;height:auto}</style></head><body>');
-      w.document.write(document.getElementById('barcode-grid').innerHTML);
-      w.document.write('</body></html>');
-      w.document.close();
-      setTimeout(() => { w.print(); w.close(); }, 250);
+      // نضيف كلاس للجسم عشان نخفي كل حاجة ونظهر الملصق المخفي بس
+      document.body.classList.add('printing-barcodes');
+      
+      // نستخدم setTimeout عشان نضمن إن المتصفح طبق الـ CSS قبل الطباعة
+      setTimeout(() => {
+        window.print();
+        // بعد ما يخلص الطباعة (أو يقفلها)، نشيل الكلاس عشان الموقع يرجع طبيعي
+        document.body.classList.remove('printing-barcodes');
+      }, 100);
     }
 
     async function loadReports(){
