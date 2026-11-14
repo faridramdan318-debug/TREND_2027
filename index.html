@@ -7,7 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- مكتبة الـ QR الجديدة والمضمونة -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
@@ -346,7 +347,6 @@
     document.getElementById('cart-total').textContent = total+' ج.م';
   }
 
-  // ⚠️ دالة البيع الجديدة (مبسطة جداً ومضمونة)
   async function executeSale(){
     if(!cart.length){
       showMessage('السلة فارغة، ضيف منتجات الأول!', true);
@@ -365,10 +365,8 @@
         }
       }
       
-      // استدعاء دالة الطباعة
       printReceipt({id:Date.now(), total, items:cart});
       
-      // تفريغ السلة بعد الطباعة
       cart = [];
       renderCart();
       await loadProducts();
@@ -443,9 +441,7 @@
         <div class="footer">
           <img src="${LOGO_URL}" class="logo" alt="Logo">
           <svg id="invoice-bc"></svg>
-          <div class="qr-container">
-            <img id="qr-code-img" src="" alt="QR Code">
-          </div>
+          <div class="qr-container" id="qr-code-img" style="display:flex; justify-content:center; margin-top:5px;"></div>
           <p>شكراً لتسوقكم من TREND</p>
           <p>امسح الكود لزيارة موقعنا</p>
         </div>
@@ -456,10 +452,16 @@
     
     JsBarcode("#invoice-bc", String(sale.id), {format:"CODE128", width:1, height:25, displayValue:false, margin:0});
     
-    const qrContainer = document.getElementById('qr-code-img');
-    QRCode.toDataURL(WEBSITE_URL, { width: 80, margin: 1 }, function (err, url) {
-      if (err) console.error(err);
-      qrContainer.src = url;
+    // إنشاء الـ QR Code بالمكتبة الجديدة
+    const qrDiv = document.getElementById('qr-code-img');
+    qrDiv.innerHTML = ''; 
+    new QRCode(qrDiv, {
+        text: WEBSITE_URL,
+        width: 60,
+        height: 60,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
     });
     
     setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 800);
