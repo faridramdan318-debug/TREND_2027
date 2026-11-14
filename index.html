@@ -7,6 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}
@@ -72,12 +74,32 @@
     .overlay { position: fixed; inset: 0; background: #302854; z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box input { margin-bottom: 12px; }
-    .thermal-receipt { width: 72mm; margin: 0 auto; padding: 10px; font-family: Arial; font-size: 12px; text-align: center; }
-    .barcode-label { width: 50mm; height: 30mm; padding: 2mm; box-sizing: border-box; text-align: center; margin: 0 auto; background: #fff; color: #000; }
-    .barcode-label h2 { font-size: 14px; margin: 0; font-weight: bold; }
-    .barcode-label .p-name { font-size: 10px; margin: 0; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .barcode-label .p-price { font-size: 15px; font-weight: bold; margin: 0; }
-    .barcode-label svg { width: 100%; height: 35px; display: block; }
+    
+    /* تصميم الفاتورة */
+    .thermal-receipt { width: 80mm; margin: 0 auto; padding: 5mm; font-family: 'Cairo', sans-serif; font-size: 12px; color: #000; background: #fff; text-align: center; }
+    .thermal-receipt .header { margin-bottom: 5px; }
+    .thermal-receipt .header h1 { font-family: 'Fredoka', sans-serif; font-size: 26px; margin: 0; font-weight: 800; }
+    .thermal-receipt .header p { margin: 2px 0; font-size: 10px; color: #555; }
+    .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 10px; margin: 8px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+    .thermal-receipt table { width: 100%; font-size: 11px; margin-bottom: 5px; text-align: right; }
+    .thermal-receipt table th { border-bottom: 1px solid #000; padding: 3px 0; background: transparent; color: #000; }
+    .thermal-receipt table td { padding: 4px 0; border-bottom: 1px dotted #ccc; }
+    .thermal-receipt .totals { margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px; font-size: 12px; }
+    .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 2px 0; }
+    .thermal-receipt .totals .grand-total { font-size: 16px; font-weight: bold; margin-top: 5px; }
+    .thermal-receipt .footer { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; align-items: center; }
+    .thermal-receipt .footer img.logo { width: 50px; height: auto; margin-bottom: 5px; filter: grayscale(100%); } /* اللوجو بالأبيض والأسود عشان الطابعة الحرارية */
+    .thermal-receipt .footer svg { margin: 5px auto; display: block; }
+    .thermal-receipt .qr-container { margin-top: 5px; }
+    .thermal-receipt .qr-container img { width: 60px; height: 60px; }
+
+    /* تصميم ملصق الباركود */
+    .barcode-label { width: 45mm; height: 28mm; padding: 1mm; box-sizing: border-box; text-align: center; margin: 0 auto; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+    .barcode-label h2 { font-size: 12px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
+    .barcode-label .p-name { font-size: 9px; margin: 0; font-weight: bold; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .barcode-label .p-price { font-size: 13px; font-weight: bold; margin: 0; }
+    .barcode-label svg { width: 90%; height: 30px; display: block; }
+
     @media print { body > * { display: none !important; } #receipt-window { display: block !important; } }
   </style>
 </head>
@@ -106,18 +128,15 @@
       <div id="message-box" class="message"></div>
       <div class="topbar"><div><div class="eyebrow">أهلاً بك في عالم اللعب</div><h2 id="page-title">نقطة البيع</h2></div></div>
       
-      <!-- شاشة البيع -->
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
         <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث بالاسم أو امسح الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
       </section>
 
-      <!-- المخزن الرئيسي -->
       <section id="page-inventory" class="page">
         <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة للمخزن</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name"></div><div class="form-group"><label>الباركود (لو سبتيه فاضي هيتولد تلقائي)</label><input id="p_barcode"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div></div><div class="form-group"><label>الكمية *</label><input type="number" id="p_quantity" value="0"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والباركود 🎈</button></div><div class="card"><h3>📋 قائمة الألعاب</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>بيع</th><th>رصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div></div>
       </section>
 
-      <!-- المخزن المنفصل -->
       <section id="page-storage" class="page">
         <div class="hero"><div><h3>المخزن المنفصل 🏬</h3><p>هنا تخزن بضاعة بدون أن تظهر في نقطة البيع.</p></div><div class="hero-art">📦</div></div>
         <div class="card"><h3>إضافة بضاعة للمخزن المنفصل</h3>
@@ -139,13 +158,17 @@
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
 <script>
+  // ⚠️⚠️ حط هنا الرابط المباشر للصورة (اللي بيبدأ بـ https://i.postimg.cc/) ⚠️⚠️
+  const LOGO_URL = 'https://i.postimg.cc/PLACEHOLDER/logo.png'; 
+  // ⚠️ حط هنا لينك موقعك ⚠️
+  const WEBSITE_URL = 'https://trend-2027.pages.dev';
+
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
   const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null;
   let currentUserRole = '';
   
-  // 1. تسجيل الدخول
   async function login(){
     const user=document.getElementById('login-user').value.trim();
     const pass=document.getElementById('login-pass').value.trim();
@@ -171,7 +194,6 @@
     else if(pass!==null) alert('كلمة المرور خطأ!');
   }
 
-  // 2. التنقل
   function switchPage(page,button){
     document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
     document.getElementById('page-'+page).classList.add('active');
@@ -185,7 +207,6 @@
 
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
-  // 3. التشغيل
   async function init(){ 
     const {data} = await db.from('warehouses').select('*').limit(1);
     if(data && data.length > 0) defaultWarehouseId = data[0].id;
@@ -205,14 +226,13 @@
     document.getElementById('storage-product-select').innerHTML = allProducts.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   }
 
-  // 4. المخزن الرئيسي (إضافة، تعديل، حذف)
   async function addProduct(){
     const name=document.getElementById('p_name').value.trim();
     let barcode=document.getElementById('p_barcode').value.trim();
     const qty=parseInt(document.getElementById('p_quantity').value)||0;
     
     if(!name) return showMessage('اكتب اسم اللعبة', true);
-    if(!barcode) barcode = 'TR-' + Date.now(); // توليد باركود تلقائي
+    if(!barcode) barcode = 'TR-' + Date.now();
     
     const {data:p, error} = await db.from('products').insert([{name, barcode, default_purchase_price:document.getElementById('p_purchase').value, default_sale_price:document.getElementById('p_sale').value}]).select().single();
     if(error) return showMessage('خطأ: '+error.message, true);
@@ -220,7 +240,7 @@
     await db.from('product_stock').insert([{product_id:p.id, warehouse_id:defaultWarehouseId, quantity:qty}]);
     showMessage('تم الحفظ بنجاح!');
     loadProducts();
-    printLabel(p); // طباعة باركود تلقائي
+    printLabel(p);
   }
 
   function renderInventoryTable(){
@@ -259,9 +279,7 @@
     showMessage('تم الحذف'); loadProducts();
   }
 
-  // 5. المخزن المنفصل (بدون علاقة بشاشة البيع)
   async function loadStorage(){
-    // بنستخدم المخزن الأول كمكان للتخزين المنفصل
     const {data} = await db.from('warehouses').select('id').limit(1);
     if(!data || !data.length) return;
     const wid = data[0].id;
@@ -292,7 +310,6 @@
     loadStorage();
   }
 
-  // 6. الموظفين
   async function addEmployee(){
     const name=document.getElementById('u_name').value.trim(), pass=document.getElementById('u_pass').value.trim(), role=document.getElementById('u_role').value;
     if(!name||!pass) return;
@@ -304,7 +321,6 @@
     document.getElementById('employees-table').innerHTML = (data||[]).map((u,i)=>`<tr><td>${i+1}</td><td>${u.username}</td><td>${u.role}</td><td>${u.username==='amr'?'-':`<button class="btn" onclick="db.from('users').delete().eq('id',${u.id}).then(()=>loadEmployees())">حذف</button>`}</td></tr>`).join('');
   }
 
-  // 7. البيع
   function renderPOSProducts(){
     const query = (document.getElementById('pos-search').value || '').toLowerCase();
     const list = document.getElementById('pos-products-list');
@@ -346,21 +362,90 @@
     cart = []; renderCart(); loadProducts();
   }
 
-  // 8. الطباعة
   function printLabel(p){
-    document.getElementById('receipt-window').innerHTML = `<div class="barcode-label"><h2>TREND</h2><p class="p-name">${p.name}</p><p class="p-price">${p.default_sale_price} ج.م</p><svg id="bc"></svg></div>`;
+    document.getElementById('receipt-window').innerHTML = `
+      <div class="barcode-label">
+        <h2>TREND</h2>
+        <p class="p-name">${p.name}</p>
+        <p class="p-price">${p.default_sale_price} ج.م</p>
+        <svg id="bc"></svg>
+      </div>`;
     document.getElementById('receipt-window').style.display='block';
-    JsBarcode("#bc", p.barcode, {format:"CODE128", width:1.5, height:40, displayValue:true, fontSize:12, margin:0});
+    JsBarcode("#bc", p.barcode, {format:"CODE128", width:1, height:30, displayValue:true, fontSize:10, margin:0});
     setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 500);
   }
 
   function printReceipt(sale){
-    let html = `<div class="thermal-receipt"><h2>TREND</h2><p>فاتورة رقم: ${sale.id}</p><hr>`;
-    sale.items.forEach(i=> html += `<div style="display:flex; justify-content:space-between;"><span>${i.name} x${i.qty}</span><span>${i.default_sale_price*i.qty}</span></div>`);
-    html += `<hr><h3>الإجمالي: ${sale.total} ج.م</h3><p>شكراً لزيارتكم</p></div>`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-EG');
+    const timeStr = now.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+    
+    let itemsHtml = sale.items.map(i => `
+      <tr>
+        <td>${i.name}</td>
+        <td>${i.qty}</td>
+        <td>${i.default_sale_price}</td>
+        <td>${i.default_sale_price * i.qty}</td>
+      </tr>
+    `).join('');
+
+    let html = `
+      <div class="thermal-receipt" dir="rtl">
+        <div class="header">
+          <h1>TREND</h1>
+          <p>نظام إدارة محل الألعاب</p>
+        </div>
+        
+        <div class="inv-info">
+          <span>فاتورة: #${String(sale.id).slice(-5)}</span>
+          <span>${dateStr}</span>
+        </div>
+        <div class="inv-info" style="border:none; padding:0;">
+          <span>الوقت: ${timeStr}</span>
+          <span>الكاشير: ${currentUserRole==='admin'?'المدير':'كاشير'}</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:right;">الصنف</th>
+              <th style="text-align:center;">كمية</th>
+              <th style="text-align:center;">سعر</th>
+              <th style="text-align:left;">إجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="grand-total"><span>الإجمالي</span><span>${sale.total} ج.م</span></div>
+        </div>
+
+        <div class="footer">
+          <img src="${LOGO_URL}" class="logo" alt="Logo">
+          <svg id="invoice-bc"></svg>
+          <div class="qr-container">
+            <img id="qr-code-img" src="" alt="QR Code">
+          </div>
+          <p>شكراً لتسوقكم من TREND</p>
+          <p>امسح الكود لزيارة موقعنا</p>
+        </div>
+      </div>`;
+      
     document.getElementById('receipt-window').innerHTML = html;
     document.getElementById('receipt-window').style.display='block';
-    setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 500);
+    
+    JsBarcode("#invoice-bc", String(sale.id), {format:"CODE128", width:1, height:25, displayValue:false, margin:0});
+    
+    const qrContainer = document.getElementById('qr-code-img');
+    QRCode.toDataURL(WEBSITE_URL, { width: 80, margin: 1 }, function (err, url) {
+      if (err) console.error(err);
+      qrContainer.src = url;
+    });
+    
+    setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 800);
   }
 </script>
 </body>
