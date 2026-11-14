@@ -55,7 +55,6 @@
     .controls{display:flex;align-items:center;gap:7px;background:#f8f6fc;border-radius:11px;padding:4px}
     .controls button{border:0;width:27px;height:27px;border-radius:8px;background:#fff;color:var(--purple);font-weight:800;cursor:pointer}
     
-    /* تنسيق الخصم والفاتورة */
     .cart-footer{padding:19px;background:#fffcf8;border-top:1px solid var(--line);border-radius:0 0 24px 24px}
     .discount-section { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
     .discount-section select { width: 80px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); font-family: 'Cairo'; font-weight: bold; }
@@ -88,18 +87,37 @@
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box input { margin-bottom: 12px; }
     
-    .thermal-receipt { width: 80mm; margin: 0 auto; padding: 2mm 4mm; font-family: 'Cairo', sans-serif; font-size: 12px; color: #000; background: #fff; text-align: center; line-height: 1.4; }
-    .thermal-receipt .header h1 { font-family: 'Fredoka', sans-serif; font-size: 28px; margin: 0; font-weight: 800; letter-spacing: 1px; }
+    /* --- تعديلات الفاتورة لتكون مظبوطة ومش معوجة --- */
+    .thermal-receipt { 
+        width: 76mm; /* عرض مناسب جداً لورق 80mm عشان ميتقطعش */
+        margin: 0 auto; 
+        padding: 2mm 2mm; 
+        font-family: 'Cairo', sans-serif; 
+        font-size: 12px; 
+        color: #000; 
+        background: #fff; 
+        text-align: center; 
+        line-height: 1.4;
+    }
+    .thermal-receipt .header h1 { 
+        font-family: 'Fredoka', sans-serif; 
+        font-size: 26px; 
+        margin: 0; 
+        font-weight: 800; 
+        letter-spacing: 1px;
+    }
     .thermal-receipt .header p { margin: 2px 0; font-size: 11px; color: #444; }
     .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 11px; margin: 10px 0; border-bottom: 1px dashed #000; padding-bottom: 6px; }
     
     .thermal-receipt table { width: 100%; font-size: 12px; margin-bottom: 8px; text-align: right; border-collapse: collapse; table-layout: fixed; }
     .thermal-receipt table th { border-bottom: 1px solid #000; padding: 5px 0; background: transparent; color: #000; font-weight: bold; }
     .thermal-receipt table td { padding: 6px 0; border-bottom: 1px dotted #ccc; word-wrap: break-word; }
-    .thermal-receipt table th:nth-child(1), .thermal-receipt table td:nth-child(1) { width: 40%; }
-    .thermal-receipt table th:nth-child(2), .thermal-receipt table td:nth-child(2) { width: 20%; text-align: center; }
-    .thermal-receipt table th:nth-child(3), .thermal-receipt table td:nth-child(3) { width: 20%; text-align: center; }
-    .thermal-receipt table th:nth-child(4), .thermal-receipt table td:nth-child(4) { width: 20%; text-align: left; }
+    
+    /* توزيع مساحات الأعمدة في الجدول */
+    .thermal-receipt table th:nth-child(1), .thermal-receipt table td:nth-child(1) { width: 45%; text-align: right; } /* الصنف */
+    .thermal-receipt table th:nth-child(2), .thermal-receipt table td:nth-child(2) { width: 15%; text-align: center; } /* كمية */
+    .thermal-receipt table th:nth-child(3), .thermal-receipt table td:nth-child(3) { width: 20%; text-align: center; } /* سعر */
+    .thermal-receipt table th:nth-child(4), .thermal-receipt table td:nth-child(4) { width: 20%; text-align: left; } /* إجمالي */
     
     .thermal-receipt .totals { margin-top: 8px; border-top: 1px dashed #000; padding-top: 8px; font-size: 13px; }
     .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 4px 0; }
@@ -126,11 +144,17 @@
     .search-invoice { display: flex; gap: 10px; margin-bottom: 20px; }
     .search-invoice input { flex: 1; padding: 15px; font-size: 18px; border: 2px solid var(--line); border-radius: 13px; font-family: 'Cairo'; }
     
+    /* إعدادات الطباعة الأساسية */
     @media print { 
         body > * { display: none !important; } 
         #receipt-window { display: block !important; } 
-        .thermal-receipt { width: 80mm !important; margin: 0 auto; }
-        @page { margin: 0; size: 80mm auto; }
+        .thermal-receipt { width: 76mm !important; margin: 0; padding: 0; }
+        
+        /* إجبار المتصفح على الطباعة بدون هوامش */
+        @page { 
+            margin: 0; 
+            size: 80mm auto; 
+        }
     }
   </style>
 </head>
@@ -640,7 +664,6 @@
 
     subtotalEl.textContent = subtotal.toFixed(2) + ' ج.م';
 
-    // حساب الخصم
     const dType = document.getElementById('discount-type').value;
     const dValue = parseFloat(document.getElementById('discount-value').value) || 0;
     
@@ -681,7 +704,6 @@
         }
       }
 
-      // حساب الخصم النهائي
       const dType = document.getElementById('discount-type').value;
       const dValue = parseFloat(document.getElementById('discount-value').value) || 0;
       let discount = 0;
@@ -695,8 +717,9 @@
       const invoiceNo = 'INV-' + Date.now();
       const {data: saleData, error: saleError} = await db.from('sales').insert([{
           invoice_no: invoiceNo,
-          total: finalTotal,
+          subtotal: subtotal,
           discount: discount,
+          total: finalTotal,
           user_id: currentUserId
       }]).select().single();
 
@@ -717,7 +740,6 @@
       printReceipt({id:saleData.id, invoice_no: invoiceNo, subtotal: subtotal, discount: discount, total: finalTotal, items:cart});
       
       cart = [];
-      // تصفير الخصم بعد البيع
       document.getElementById('discount-value').value = '';
       document.getElementById('discount-type').value = 'percent';
       
