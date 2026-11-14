@@ -101,6 +101,16 @@
     .barcode-label .p-price { font-size: 15px; font-weight: bold; margin: 0; }
     .barcode-label svg { width: 100%; height: 40px; display: block; }
 
+    /* تنسيق التقارير */
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+    .stat-card { background: #fff; padding: 20px; border-radius: 20px; box-shadow: var(--shadow); text-align: center; border: 1px solid var(--line); }
+    .stat-card h4 { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+    .stat-card .value { font-size: 26px; font-weight: 800; }
+    .stat-card:nth-child(1) .value { color: var(--purple); }
+    .stat-card:nth-child(2) .value { color: var(--green); }
+    .stat-card:nth-child(3) .value { color: var(--pink); }
+    .stat-card:nth-child(4) .value { color: var(--yellow); }
+
     @media print { body > * { display: none !important; } #receipt-window { display: block !important; } }
   </style>
 </head>
@@ -151,7 +161,6 @@
         <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة للمخزن</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name"></div><div class="form-group"><label>الباركود (لو سبتيه فاضي هيتولد تلقائي)</label><input id="p_barcode"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div></div><div class="form-group"><label>الكمية *</label><input type="number" id="p_quantity" value="0"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والباركود 🎈</button></div><div class="card"><h3>📋 قائمة الألعاب</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>بيع</th><th>رصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div></div>
       </section>
 
-      <!-- شاشة المخزن الخاص -->
       <section id="page-storage" class="page">
         <div class="hero"><div><h3>مخزن خاص 🏬</h3><p>خزّن بضاعتك هنا بشكل يدوي منفصل تماماً عن نقطة البيع.</p></div><div class="hero-art">📦</div></div>
         <div class="grid-two">
@@ -177,8 +186,26 @@
         </div>
       </section>
 
+      <!-- شاشة التقارير الجديدة -->
       <section id="page-reports" class="page">
-        <div class="hero"><div><h3>التقارير 📊</h3><p>هنا تظهر تقارير الأرباح والمبيعات.</p></div><div class="hero-art">💰</div></div>
+        <div class="hero"><div><h3>التقارير المالية 📊</h3><p>تابع إجمالي المبيعات والأرباح بدقة من قاعدة البيانات.</p></div><div class="hero-art">💰</div></div>
+        
+        <div class="stat-grid">
+            <div class="stat-card"><h4>إجمالي المبيعات</h4><div class="value" id="r-total-sales">0</div></div>
+            <div class="stat-card"><h4>إجمالي الأرباح</h4><div class="value" id="r-total-profit">0</div></div>
+            <div class="stat-card"><h4>عدد الفواتير</h4><div class="value" id="r-invoices">0</div></div>
+            <div class="stat-card"><h4>القطع المباعة</h4><div class="value" id="r-items">0</div></div>
+        </div>
+
+        <div class="card">
+            <h3>سجل الفواتير</h3>
+            <div class="table-wrap" style="max-height:500px; overflow-y:auto;">
+                <table>
+                    <thead><tr><th>#</th><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد القطع</th><th>الإجمالي</th><th>الربح</th></tr></thead>
+                    <tbody id="reports-table"></tbody>
+                </table>
+            </div>
+        </div>
       </section>
 
       <section id="page-settings" class="page">
@@ -246,6 +273,7 @@
     
     if(page==='pos') loadProducts();
     if(page==='storage') loadPrivateWarehouse();
+    if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
         document.getElementById('barcode_width').value = bcWidth;
@@ -256,11 +284,9 @@
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
   async function init(){ 
-    // 1. المخزن الأساسي
     const {data:wh} = await db.from('warehouses').select('*').eq('code', 'MAIN-01').single();
     if(wh) defaultWarehouseId = wh.id;
 
-    // 2. المخزن الخاص
     const {data:privWh} = await db.from('warehouses').select('*').eq('code', 'PRIVATE-01').single();
     if(privWh) privateWarehouseId = privWh.id;
 
@@ -296,7 +322,6 @@
     printLabel(p);
   }
 
-  // --- دوال المخزن الخاص ---
   async function addPrivateProduct(){
     const name = document.getElementById('s_name').value.trim();
     const purchase = parseFloat(document.getElementById('s_purchase').value)||0;
@@ -333,7 +358,6 @@
     if(!privateWarehouseId) return;
     const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', privateWarehouseId);
     
-    // محتاجين نجيب بيانات المنتجات لجدول المخزن الخاص
     const {data:prods} = await db.from('products').select('*');
     const allP = prods || [];
 
@@ -348,6 +372,61 @@
         <td>${s.quantity}</td>
       </tr>`;
     }).join('');
+  }
+
+  // --- دالة تحميل التقارير ---
+  async function loadReports() {
+      const { data: sales, error } = await db.from('sales').select('*').order('created_at', {ascending: false});
+      if(error) return showMessage('خطأ في تحميل التقارير', true);
+
+      const { data: items } = await db.from('sales_items').select('*');
+      
+      let totalSales = 0;
+      let totalProfit = 0;
+      let totalItems = 0;
+
+      // حساب الإجماليات
+      sales.forEach(sale => {
+          totalSales += Number(sale.total);
+      });
+
+      items.forEach(item => {
+          totalItems += Number(item.quantity);
+          // لحساب الربح، محتاجين سعر الشراء من جدول المنتجات
+          const prod = allProducts.find(p => p.id === item.product_id);
+          if(prod) {
+              totalProfit += (Number(item.price) - Number(prod.default_purchase_price)) * Number(item.quantity);
+          }
+      });
+
+      // عرض الإحصائيات
+      document.getElementById('r-total-sales').textContent = totalSales.toFixed(2) + ' ج.م';
+      document.getElementById('r-total-profit').textContent = totalProfit.toFixed(2) + ' ج.م';
+      document.getElementById('r-invoices').textContent = sales.length;
+      document.getElementById('r-items').textContent = totalItems;
+
+      // عرض جدول الفواتير
+      const tbody = document.getElementById('reports-table');
+      tbody.innerHTML = sales.map((sale, index) => {
+          // حساب عدد القطع والربح لهذه الفاتورة
+          const saleItems = items.filter(i => i.sale_id === sale.id);
+          let itemsCount = 0;
+          let profit = 0;
+          saleItems.forEach(i => {
+              itemsCount += Number(i.quantity);
+              const prod = allProducts.find(p => p.id === i.product_id);
+              if(prod) profit += (Number(i.price) - Number(prod.default_purchase_price)) * Number(i.quantity);
+          });
+
+          return `<tr>
+              <td>${index + 1}</td>
+              <td>${sale.invoice_no}</td>
+              <td>${new Date(sale.created_at).toLocaleString('ar-EG')}</td>
+              <td>${itemsCount}</td>
+              <td>${Number(sale.total).toFixed(2)} ج.م</td>
+              <td><span class="badge" style="background:#e4f8ef;color:#14734f;">${profit.toFixed(2)} ج.م</span></td>
+          </tr>`;
+      }).join('');
   }
   // -------------------------
 
@@ -581,7 +660,7 @@
           <p>امسح الكود لمتابعتنا على تيك توك</p>
         </div>
       </div>`;
-      
+      مممممم
     document.getElementById('receipt-window').innerHTML = html;
     document.getElementById('receipt-window').style.display='block';
     
