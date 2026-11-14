@@ -111,6 +111,10 @@
     .stat-card:nth-child(3) .value { color: var(--pink); }
     .stat-card:nth-child(4) .value { color: var(--yellow); }
 
+    /* تعديلات شاشة المرتجعات */
+    .search-invoice { display: flex; gap: 10px; margin-bottom: 20px; }
+    .search-invoice input { flex: 1; padding: 15px; font-size: 18px; border: 2px solid var(--line); border-radius: 13px; font-family: 'Cairo'; }
+    
     @media print { body > * { display: none !important; } #receipt-window { display: block !important; } }
   </style>
 </head>
@@ -186,9 +190,8 @@
         </div>
       </section>
 
-      <!-- شاشة التقارير الجديدة -->
       <section id="page-reports" class="page">
-        <div class="hero"><div><h3>التقارير المالية 📊</h3><p>تابع إجمالي المبيعات والأرباح بدقة من قاعدة البيانات.</p></div><div class="hero-art">💰</div></div>
+        <div class="hero"><div><h3>التقارير والمرتجعات 📊</h3><p>تابع المبيعات والأرباح، وابحث عن فاتورة لعمل مرتجع.</p></div><div class="hero-art">💰</div></div>
         
         <div class="stat-grid">
             <div class="stat-card"><h4>إجمالي المبيعات</h4><div class="value" id="r-total-sales">0</div></div>
@@ -198,8 +201,23 @@
         </div>
 
         <div class="card">
+            <h3>🔍 مراجعة فاتورة / مرتجع</h3>
+            <div class="search-invoice">
+                <input type="text" id="search-invoice-num" placeholder="امسح الباركود الخاص بالفاتورة أو اكتب رقمها هنا..." onkeydown="if(event.key==='Enter') searchInvoice()">
+                <button class="btn" onclick="searchInvoice()">بحث</button>
+            </div>
+            <div id="invoice-details" style="display:none; margin-top:20px;">
+                <h4 style="margin-bottom:10px;">تفاصيل الفاتورة: <span id="inv-num-display"></span></h4>
+                <table>
+                    <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>إجراء</th></tr></thead>
+                    <tbody id="invoice-items-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
             <h3>سجل الفواتير</h3>
-            <div class="table-wrap" style="max-height:500px; overflow-y:auto;">
+            <div class="table-wrap" style="max-height:300px; overflow-y:auto;">
                 <table>
                     <thead><tr><th>#</th><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد القطع</th><th>الإجمالي</th><th>الربح</th></tr></thead>
                     <tbody id="reports-table"></tbody>
@@ -374,7 +392,7 @@
     }).join('');
   }
 
-  // --- دالة تحميل التقارير ---
+  // دالة التقارير
   async function loadReports() {
       const { data: sales, error } = await db.from('sales').select('*').order('created_at', {ascending: false});
       if(error) return showMessage('خطأ في تحميل التقارير', true);
@@ -385,30 +403,20 @@
       let totalProfit = 0;
       let totalItems = 0;
 
-      // حساب الإجماليات
-      sales.forEach(sale => {
-          totalSales += Number(sale.total);
-      });
-
+      sales.forEach(sale => { totalSales += Number(sale.total); });
       items.forEach(item => {
           totalItems += Number(item.quantity);
-          // لحساب الربح، محتاجين سعر الشراء من جدول المنتجات
           const prod = allProducts.find(p => p.id === item.product_id);
-          if(prod) {
-              totalProfit += (Number(item.price) - Number(prod.default_purchase_price)) * Number(item.quantity);
-          }
+          if(prod) totalProfit += (Number(item.price) - Number(prod.default_purchase_price)) * Number(item.quantity);
       });
 
-      // عرض الإحصائيات
       document.getElementById('r-total-sales').textContent = totalSales.toFixed(2) + ' ج.م';
       document.getElementById('r-total-profit').textContent = totalProfit.toFixed(2) + ' ج.م';
       document.getElementById('r-invoices').textContent = sales.length;
       document.getElementById('r-items').textContent = totalItems;
 
-      // عرض جدول الفواتير
       const tbody = document.getElementById('reports-table');
       tbody.innerHTML = sales.map((sale, index) => {
-          // حساب عدد القطع والربح لهذه الفاتورة
           const saleItems = items.filter(i => i.sale_id === sale.id);
           let itemsCount = 0;
           let profit = 0;
@@ -428,7 +436,73 @@
           </tr>`;
       }).join('');
   }
-  // -------------------------
+
+  // دالة البحث عن فاتورة (للمرتجع)
+  async function searchInvoice() {
+      const query = document.getElementById('search-invoice-num').value.trim();
+      if(!query) return;
+      
+      const { data: sale, error } = await db.from('sales').select('*').eq('invoice_no', query).single();
+      
+      if(error || !sale) {
+          showMessage('لم يتم العثور على الفاتورة!', true);
+          document.getElementById('invoice-details').style.display = 'none';
+          return;
+      }
+      
+      document.getElementById('inv-num-display').textContent = sale.invoice_no;
+      document.getElementById('invoice-details').style.display = 'block';
+      
+      const { data: items } = await db.from('sales_items').select('*').eq('sale_id', sale.id);
+      
+      const tbody = document.getElementById('invoice-items-table');
+      tbody.innerHTML = items.map(item => `
+          <tr>
+              <td>${item.product_name}</td>
+              <td>${item.quantity}</td>
+              <td>${Number(item.price).toFixed(2)}</td>
+              <td>${Number(item.total).toFixed(2)}</td>
+              <td><button class="btn" style="padding:5px 10px; background:var(--red);" onclick="processReturn(${sale.id}, ${item.product_id}, ${item.quantity})">مرتجع</button></td>
+          </tr>
+      `).join('');
+  }
+
+  // دالة عمل المرتجع
+  async function processReturn(saleId, productId, maxQty) {
+      if(currentUserRole !== 'admin') {
+          return showMessage('هذا الإجراء للمدير فقط', true);
+      }
+
+      const returnQty = parseInt(prompt(`الكمية المراد إرجاعها (الحد الأقصى ${maxQty}):`, maxQty));
+      if(!returnQty || returnQty <= 0 || returnQty > maxQty) {
+          return showMessage('كمية غير صحيحة', true);
+      }
+
+      try {
+          // 1. تسجيل المرتجع في جدول sales_returns
+          const { error: returnError } = await db.from('sales_returns').insert([{
+              sale_id: saleId,
+              product_id: productId,
+              quantity: returnQty
+          }]);
+          if(returnError) throw returnError;
+
+          // 2. إرجاع الكمية للمخزن الرئيسي
+          const { data: stockData } = await db.from('product_stock').select('*').eq('product_id', productId).eq('warehouse_id', defaultWarehouseId).single();
+          if(stockData) {
+              await db.from('product_stock').update({ quantity: Number(stockData.quantity) + returnQty }).eq('id', stockData.id);
+          } else {
+              await db.from('product_stock').insert([{ product_id: productId, warehouse_id: defaultWarehouseId, quantity: returnQty }]);
+          }
+
+          showMessage('تم تسجيل المرتجع وإرجاع البضاعة للمخزن بنجاح!');
+          await loadProducts(); 
+          searchInvoice(); 
+
+      } catch(err) {
+          showMessage('حدث خطأ: ' + err.message, true);
+      }
+  }
 
   function renderInventoryTable(){
     const body=document.getElementById('inventory-table');
@@ -660,7 +734,7 @@
           <p>امسح الكود لمتابعتنا على تيك توك</p>
         </div>
       </div>`;
-      مممممم
+      
     document.getElementById('receipt-window').innerHTML = html;
     document.getElementById('receipt-window').style.display='block';
     
