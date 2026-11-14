@@ -86,10 +86,8 @@
     .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 2px 0; }
     .thermal-receipt .totals .grand-total { font-size: 16px; font-weight: bold; margin-top: 5px; }
     .thermal-receipt .footer { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; align-items: center; }
-    .thermal-receipt .footer img.logo { width: 50px; height: auto; margin-bottom: 5px; filter: grayscale(100%); }
-    .thermal-receipt .footer svg { margin: 5px auto; display: block; }
-    .thermal-receipt .qr-container { margin-top: 5px; }
-    .thermal-receipt .qr-container img { width: 60px; height: 60px; }
+    .thermal-receipt .footer img.logo { width: 60px; height: auto; margin-bottom: 5px; filter: grayscale(100%); }
+    .thermal-receipt .footer .qr-container { margin-top: 5px; display:flex; justify-content:center; }
 
     .barcode-label { width: 45mm; height: 28mm; padding: 1mm; box-sizing: border-box; text-align: center; margin: 0 auto; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
     .barcode-label h2 { font-size: 12px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
@@ -155,10 +153,10 @@
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
 <script>
-  // ⚠️⚠️ حط هنا رابط صورة اللوجو بتاعك (لما ترفعها على النت) ⚠️⚠️
-  const LOGO_URL = 'https://postimg.cc/XZ0Bp6X2'; 
+  // ⚠️⚠️ هنا حطيت رابط صورتك، لو مظهرش هتغير الرابط للي ينتهي بـ .png ⚠️⚠️
+  const LOGO_URL = 'https://i.postimg.cc/XZ0Bp6X2/trend-logo.jpg'; 
   
-  // ⚠️ اللينك اللي هيودي عليه الـ QR Code (التيك توك) ⚠️
+  // ⚠️ اللينك بتاع التيك توك اللي الـ QR هيودي عليه ⚠️
   const WEBSITE_URL = 'https://www.tiktok.com/@trendtrendkolyoum?_r=1&_t=ZS-9BOa7zZUCQv';
 
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
@@ -441,8 +439,7 @@
 
         <div class="footer">
           <img src="${LOGO_URL}" class="logo" alt="Logo">
-          <svg id="invoice-bc"></svg>
-          <div class="qr-container" id="qr-code-img" style="display:flex; justify-content:center; margin-top:5px;"></div>
+          <div class="qr-container" id="qr-code-img"></div>
           <p>شكراً لتسوقكم من TREND</p>
           <p>امسح الكود لمتابعتنا على تيك توك</p>
         </div>
@@ -450,8 +447,6 @@
       
     document.getElementById('receipt-window').innerHTML = html;
     document.getElementById('receipt-window').style.display='block';
-    
-    JsBarcode("#invoice-bc", String(sale.id), {format:"CODE128", width:1, height:25, displayValue:false, margin:0});
     
     const qrDiv = document.getElementById('qr-code-img');
     qrDiv.innerHTML = ''; 
