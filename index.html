@@ -7,67 +7,69 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* التصميم ده بناءً على شكل نظامك الحالي عشان ميبوظش */
-        :root{--bg:#f4f7f6;--sidebar:#3b2f63;--sidebar-hover:#4a3b7a;--primary:#ff6b6b;--text:#374151;--white:#fff;--border:#e5e7eb;}
-        *{box-sizing:border-box;font-family:'Cairo',sans-serif;margin:0;padding:0;}
-        body{background:var(--bg);display:flex;height:100vh;overflow:hidden;color:var(--text);}
-        
+        /* تصميم الهدايا الجديد */
+        :root { --bg: #fcf9f2; --sidebar: #3b2f63; --sidebar-hover: #4a3b7a; --primary: #ff6b6b; --text: #374151; --white: #fff; --border: #e5e7eb; }
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg); display: flex; height: 100vh; overflow: hidden; color: var(--text); }
+
         /* شاشة تسجيل الدخول */
-        #login-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--sidebar);display:flex;justify-content:center;align-items:center;z-index:9999;}
-        .login-box{background:var(--white);padding:40px;border-radius:16px;text-align:center;width:360px;box-shadow:0 10px 25px rgba(0,0,0,0.2);}
-        .login-box h2{color:var(--sidebar);margin-bottom:25px;font-size:24px;}
-        .login-box input{width:100%;padding:12px;margin-bottom:15px;border:1px solid var(--border);border-radius:8px;font-family:'Cairo';font-size:15px;}
-        .login-box button{background:var(--primary);color:white;border:none;padding:12px;width:100%;border-radius:8px;cursor:pointer;font-weight:bold;font-size:16px;}
-        #login-err{color:red; margin-top:15px; display:none; font-size:14px;}
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: var(--white); padding: 40px; border-radius: 16px; text-align: center; width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .login-box h2 { color: var(--sidebar); margin-bottom: 25px; font-size: 24px; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Cairo'; font-size: 15px; outline: none; }
+        .login-box button { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .login-box button:hover { background: #ff5252; }
+        #login-err { color: red; margin-top: 15px; display: none; font-size: 14px; }
 
         /* القائمة الجانبية */
-        .sidebar{width:260px;background:var(--sidebar);color:#d1d5db;display:flex;flex-direction:column;transition:.3s;z-index:100;display:none;}
-        .sidebar .logo{padding:25px 20px;text-align:center;font-size:28px;font-weight:700;color:var(--white);border-bottom:1px solid #4a3b7a;letter-spacing:2px;}
-        .sidebar button{background:none;border:none;color:#d1d5db;padding:18px 24px;text-align:right;font-size:16px;cursor:pointer;transition:.2s;width:100%;font-weight:600;display:flex;align-items:center;gap:12px;border-right:4px solid transparent;}
-        .sidebar button:hover,.sidebar button.active{background:var(--sidebar-hover);color:var(--white);border-right-color:var(--primary);}
-        .sidebar .logout-btn{margin-top:auto; color:#fca5a5; border-top:1px solid #4a3b7a;}
-        
+        .sidebar { width: 260px; background: var(--sidebar); color: #d1d5db; display: flex; flex-direction: column; transition: .3s; z-index: 100; display: none; }
+        .sidebar .logo { padding: 25px 20px; text-align: center; font-size: 28px; font-weight: 700; color: var(--white); border-bottom: 1px solid #4a3b7a; letter-spacing: 2px; }
+        .sidebar button { background: none; border: none; color: #d1d5db; padding: 18px 24px; text-align: right; font-size: 16px; cursor: pointer; transition: .2s; width: 100%; font-weight: 600; display: flex; align-items: center; gap: 12px; border-right: 4px solid transparent; }
+        .sidebar button:hover, .sidebar button.active { background: var(--sidebar-hover); color: var(--white); border-right-color: var(--primary); }
+        .sidebar .logout-btn { margin-top: auto; color: #fca5a5; border-top: 1px solid #4a3b7a; }
+
         /* المحتوى */
-        .main-content{flex:1;padding:30px;overflow-y:auto;display:flex;flex-direction:column;gap:25px;display:none;}
-        .page{display:none;animation:fadeIn .3s ease-in-out;}
-        .page.active{display:block;}
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; display: none; }
+        .page { display: none; animation: fadeIn .3s ease-in-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .card{background:var(--white);padding:25px;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);margin-bottom:25px;border:1px solid var(--border);}
-        .card h3{margin-bottom:20px;color:var(--sidebar);font-size:18px;border-bottom:2px solid var(--border);padding-bottom:15px;}
-        .form-group{margin-bottom:18px;}
-        label{display:block;margin-bottom:8px;font-weight:600;font-size:14px;color:#4b5563;}
-        input, select{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:.2s;font-family:'Cairo';}
-        input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(255,107,107,.2);}
-        button.btn{background:var(--primary);color:var(--white);border:none;padding:12px 20px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700;width:100%;transition:.2s;}
-        button.btn:hover{background:#ff5252;}
+        .card { background: var(--white); padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); margin-bottom: 25px; border: 1px solid var(--border); }
+        .card h3 { margin-bottom: 20px; color: var(--sidebar); font-size: 18px; border-bottom: 2px solid var(--border); padding-bottom: 15px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #4b5563; }
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: .2s; font-family: 'Cairo'; }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,107,.2); }
+        button.btn { background: var(--primary); color: var(--white); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 700; width: 100%; transition: .2s; }
+        button.btn:hover { background: #ff5252; }
         
-        /* POS */
-        .pos-layout{display:flex;gap:25px;height:calc(100vh - 80px);}
-        .pos-products{flex:2;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px;align-content:start;}
+        /* تصميم شاشة البيع (POS) */
+        .pos-layout { display: flex; gap: 25px; height: calc(100vh - 80px); }
+        .pos-products { flex: 2; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; align-content: start; }
         
-        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-items: center; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-items: center; border: 1px solid var(--border); }
         .search-bar input { flex: 1; padding: 15px; font-size: 18px; border: 2px solid var(--border); border-radius: 8px; transition: 0.3s; }
         .search-bar input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 10px rgba(255,107,107,0.3); }
         
-        .product-card{background:var(--white);padding:20px;border-radius:16px;text-align:center;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.04);transition:.2s;border:1px solid var(--border);}
-        .product-card:hover{transform:translateY(-5px);box-shadow:0 10px 15px -3px rgba(0,0,0,.1);border-color:var(--primary);}
-        .product-card h4{margin-bottom:15px;color:var(--sidebar);font-size:16px;}
-        .product-card .price{color:var(--primary);font-weight:700;font-size:20px;}
+        .product-card { background: var(--white); padding: 20px; border-radius: 16px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.04); transition: .2s; border: 1px solid var(--border); }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1); border-color: var(--primary); }
+        .product-card h4 { margin-bottom: 15px; color: var(--sidebar); font-size: 16px; }
+        .product-card .price { color: var(--primary); font-weight: 700; font-size: 20px; }
         
-        .pos-cart{flex:1;background:var(--white);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);border:1px solid var(--border);}
-        .pos-cart h3{padding:20px;background:var(--sidebar);color:var(--white);margin:0;border-radius:16px 16px 0 0;text-align:center;font-size:18px;}
-        .cart-items{flex:1;overflow-y:auto;padding:20px;}
-        .cart-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding:15px 0;}
-        .cart-item-info h5{margin:0 0 5px;font-size:15px;color:var(--sidebar);}
-        .cart-item-info span{font-size:13px;color:#6b7280;}
-        .cart-controls{display:flex;align-items:center;gap:12px;background:#f3f4f6;padding:5px 10px;border-radius:8px;}
-        .cart-controls button{padding:4px 10px;border:none;background:var(--white);border-radius:4px;cursor:pointer;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1);}
-        .cart-footer{padding:20px;background:#f9fafb;border-radius:0 0 16px 16px;border-top:1px solid var(--border);}
-        .total-row{display:flex;justify-content:space-between;font-size:24px;font-weight:700;margin-bottom:20px;color:var(--sidebar);}
+        .pos-cart { flex: 1; background: var(--white); border-radius: 16px; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); border: 1px solid var(--border); }
+        .pos-cart h3 { padding: 20px; background: var(--sidebar); color: var(--white); margin: 0; border-radius: 16px 16px 0 0; text-align: center; font-size: 18px; }
+        .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 15px 0; }
+        .cart-item-info h5 { margin: 0 0 5px; font-size: 15px; color: var(--sidebar); }
+        .cart-item-info span { font-size: 13px; color: #6b7280; }
+        .cart-controls { display: flex; align-items: center; gap: 12px; background: #f3f4f6; padding: 5px 10px; border-radius: 8px; }
+        .cart-controls button { padding: 4px 10px; border: none; background: var(--white); border-radius: 4px; cursor: pointer; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+        .cart-footer { padding: 20px; background: #f9fafb; border-radius: 0 0 16px 16px; border-top: 1px solid var(--border); }
+        .total-row { display: flex; justify-content: space-between; font-size: 24px; font-weight: 700; margin-bottom: 20px; color: var(--sidebar); }
         
-        .message{padding:15px;text-align:center;border-radius:8px;margin-bottom:20px;display:none;font-weight:700;}
-        .message.success{display:block;background:#d1fae5;color:#065f46;border:1px solid #10b981;}
-        .message.error{display:block;background:#fee2e2;color:#991b1b;border:1px solid #ef4444;}
+        .message { padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 20px; display: none; font-weight: 700; }
+        .message.success { display: block; background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .message.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
         
         @media print {
             body * { visibility: hidden; }
@@ -164,7 +166,7 @@
                     <div class="form-group" style="margin:0;"><label>اسم المستخدم</label><input type="text" id="u_name"></div>
                     <div class="form-group" style="margin:0;"><label>كلمة المرور</label><input type="text" id="u_pass"></div>
                     <div class="form-group" style="margin:0;"><label>الصلاحية</label>
-                        <select id="u_role" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); font-family:'Cairo';">
+                        <select id="u_role">
                             <option value="cashier">كاشير</option>
                             <option value="admin">مدير</option>
                         </select>
@@ -194,7 +196,7 @@
         let allProducts=[], cart=[], defaultWarehouseId=null;
         let currentUserRole = '';
 
-        // 1. تسجيل الدخول
+        // تسجيل الدخول
         async function login() {
             const user = document.getElementById('login-user').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
@@ -216,7 +218,6 @@
                     document.getElementById('btn-reports').style.display = 'none';
                     document.getElementById('btn-settings').style.display = 'none';
                 }
-                
                 init();
             } else {
                 err.style.display = 'block';
@@ -225,14 +226,12 @@
 
         function logout() { location.reload(); }
 
-        // 2. إدارة الموظفين
+        // إدارة الموظفين
         async function addEmployee() {
             const name = document.getElementById('u_name').value.trim();
             const pass = document.getElementById('u_pass').value.trim();
             const role = document.getElementById('u_role').value;
-
             if(!name || !pass) return showMessage('ادخل اسم المستخدم وكلمة المرور', true);
-
             try {
                 const { error } = await db.from('users').insert([{ username: name, password: pass, role: role }]);
                 if(error) throw error;
@@ -240,9 +239,7 @@
                 document.getElementById('u_name').value = '';
                 document.getElementById('u_pass').value = '';
                 loadEmployees();
-            } catch(e) {
-                showMessage('خطأ: ' + e.message, true);
-            }
+            } catch(e) { showMessage('خطأ: ' + e.message, true); }
         }
 
         async function loadEmployees() {
@@ -273,7 +270,7 @@
             loadEmployees();
         }
 
-        // 3. طلب باسورد المدير
+        // طلب باسورد المدير
         function requireAdminAuth(callback) {
             if(currentUserRole === 'admin') {
                 callback();
@@ -287,13 +284,11 @@
             }
         }
 
-        // 4. التنقل
         function switchPage(e, btnElement){
             document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
             document.querySelectorAll('.sidebar button').forEach(el=>el.classList.remove('active'));
             document.getElementById('page-'+e).classList.add('active');
             if(btnElement) btnElement.classList.add('active');
-            
             if(e === 'settings') loadEmployees();
         }
 
@@ -304,7 +299,6 @@
             setTimeout(()=>{n.style.display='none'},3e3);
         }
 
-        // 5. المنتجات
         async function init(){
             try{
                 const{data:e,error:t}=await db.from('warehouses').select('id').limit(1);
@@ -503,4 +497,4 @@
         }
     </script>
 </body>
-</html>Supabase
+</html>
