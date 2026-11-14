@@ -7,7 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <!-- مكتبة الـ QR الجديدة والمضمونة -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
@@ -156,9 +155,11 @@
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
 <script>
-  // ⚠️⚠️ غير اللوجو ده وحط رابط صورة اللوجو بتاعك ⚠️⚠️
-  const LOGO_URL = 'https://i.postimg.cc/PLACEHOLDER/logo.png'; 
-  const WEBSITE_URL = 'https://trend-2027.pages.dev';
+  // ⚠️⚠️ حط هنا رابط صورة اللوجو بتاعك (لما ترفعها على النت) ⚠️⚠️
+  const LOGO_URL = 'https://postimg.cc/XZ0Bp6X2'; 
+  
+  // ⚠️ اللينك اللي هيودي عليه الـ QR Code (التيك توك) ⚠️
+  const WEBSITE_URL = 'https://www.tiktok.com/@trendtrendkolyoum?_r=1&_t=ZS-9BOa7zZUCQv';
 
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
   const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
@@ -443,7 +444,7 @@
           <svg id="invoice-bc"></svg>
           <div class="qr-container" id="qr-code-img" style="display:flex; justify-content:center; margin-top:5px;"></div>
           <p>شكراً لتسوقكم من TREND</p>
-          <p>امسح الكود لزيارة موقعنا</p>
+          <p>امسح الكود لمتابعتنا على تيك توك</p>
         </div>
       </div>`;
       
@@ -452,7 +453,6 @@
     
     JsBarcode("#invoice-bc", String(sale.id), {format:"CODE128", width:1, height:25, displayValue:false, margin:0});
     
-    // إنشاء الـ QR Code بالمكتبة الجديدة
     const qrDiv = document.getElementById('qr-code-img');
     qrDiv.innerHTML = ''; 
     new QRCode(qrDiv, {
