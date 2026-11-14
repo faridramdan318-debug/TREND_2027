@@ -7,8 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* تصميم الهدايا الجديد */
-        :root { --bg: #fcf9f2; --sidebar: #3b2f63; --sidebar-hover: #4a3b7a; --primary: #ff6b6b; --text: #374151; --white: #fff; --border: #e5e7eb; }
+        /* رجوع ألوان الهدايا */
+        :root { --bg: #fef9f3; --sidebar: #4a3b7a; --sidebar-hover: #5a4a8a; --primary: #ff6b6b; --text: #374151; --white: #fff; --border: #e5e7eb; }
         * { box-sizing: border-box; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
         body { background-color: var(--bg); display: flex; height: 100vh; overflow: hidden; color: var(--text); }
 
@@ -23,10 +23,10 @@
 
         /* القائمة الجانبية */
         .sidebar { width: 260px; background: var(--sidebar); color: #d1d5db; display: flex; flex-direction: column; transition: .3s; z-index: 100; display: none; }
-        .sidebar .logo { padding: 25px 20px; text-align: center; font-size: 28px; font-weight: 700; color: var(--white); border-bottom: 1px solid #4a3b7a; letter-spacing: 2px; }
+        .sidebar .logo { padding: 25px 20px; text-align: center; font-size: 28px; font-weight: 700; color: var(--white); border-bottom: 1px solid #5a4a8a; letter-spacing: 2px; }
         .sidebar button { background: none; border: none; color: #d1d5db; padding: 18px 24px; text-align: right; font-size: 16px; cursor: pointer; transition: .2s; width: 100%; font-weight: 600; display: flex; align-items: center; gap: 12px; border-right: 4px solid transparent; }
         .sidebar button:hover, .sidebar button.active { background: var(--sidebar-hover); color: var(--white); border-right-color: var(--primary); }
-        .sidebar .logout-btn { margin-top: auto; color: #fca5a5; border-top: 1px solid #4a3b7a; }
+        .sidebar .logout-btn { margin-top: auto; color: #fca5a5; border-top: 1px solid #5a4a8a; }
 
         /* المحتوى */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; display: none; }
@@ -43,7 +43,7 @@
         button.btn { background: var(--primary); color: var(--white); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 700; width: 100%; transition: .2s; }
         button.btn:hover { background: #ff5252; }
         
-        /* تصميم شاشة البيع (POS) */
+        /* تصميم شاشة البيع (POS) - زي القديم */
         .pos-layout { display: flex; gap: 25px; height: calc(100vh - 80px); }
         .pos-products { flex: 2; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; align-content: start; }
         
@@ -196,13 +196,11 @@
         let allProducts=[], cart=[], defaultWarehouseId=null;
         let currentUserRole = '';
 
-        // تسجيل الدخول
         async function login() {
             const user = document.getElementById('login-user').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
             const err = document.getElementById('login-err');
-            
-            const {data, error} = await db.from('users').select('*').eq('username', user).eq('password', pass).single();
+            const {data} = await db.from('users').select('*').eq('username', user).eq('password', pass).single();
 
             if(data) {
                 currentUserRole = data.role;
@@ -226,7 +224,6 @@
 
         function logout() { location.reload(); }
 
-        // إدارة الموظفين
         async function addEmployee() {
             const name = document.getElementById('u_name').value.trim();
             const pass = document.getElementById('u_pass').value.trim();
@@ -270,7 +267,6 @@
             loadEmployees();
         }
 
-        // طلب باسورد المدير
         function requireAdminAuth(callback) {
             if(currentUserRole === 'admin') {
                 callback();
