@@ -161,13 +161,18 @@
         <div class="card"><h3>رصيد المخزن المنفصل</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكمية</th></tr></thead><tbody id="storage-table"></tbody></table></div></div>
       </section>
 
-      <section id="page-reports" class="page"><div class="hero"><div><h3>التقارير 📊</h3><p>هنا تظهر تقارير الأرباح والمبيعات.</p></div><div class="hero-art">💰</div></div></section>
+      <section id="page-reports" class="page">
+        <div class="hero"><div><h3>التقارير 📊</h3><p>هنا تظهر تقارير الأرباح والمبيعات.</p></div><div class="hero-art">💰</div></div>
+        <div class="card" style="text-align:center; padding:50px;">
+            <h3>سيتم إضافة التقارير في التحديث القادم</h3>
+            <p style="color:var(--muted);">كل الفواتير بتتسجل في الداتا بيز بأمان.</p>
+        </div>
+      </section>
 
       <section id="page-settings" class="page">
         <div class="card"><h3>➕ إضافة موظف</h3><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:15px;"><div class="form-group"><label>المستخدم</label><input id="u_name"></div><div class="form-group"><label>الباسورد</label><input id="u_pass"></div><div class="form-group"><label>الصلاحية</label><select id="u_role"><option value="cashier">كاشير</option><option value="admin">مدير</option></select></div></div><button class="btn" onclick="addEmployee()" style="width:auto;">حفظ</button></div>
         <div class="card"><h3>👥 الموظفين</h3><table><thead><tr><th>#</th><th>الاسم</th><th>الصلاحية</th><th>حذف</th></tr></thead><tbody id="employees-table"></tbody></table></div>
         
-        <!-- إعدادات الطباعة الجديدة -->
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
             <div class="form-group"><label>عرض الباركود (كل ما يزيد يعرض أكتر)</label><input type="number" id="barcode_width" value="1.5" step="0.1"></div>
@@ -186,10 +191,10 @@
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
   const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null;
+  let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null, storageWarehouseId=null;
   let currentUserRole = '';
+  let currentUserId = null; 
   
-  // متغيرات إعدادات الباركود
   let bcWidth = parseFloat(localStorage.getItem('bc_width') || '1.5');
   let bcHeight = parseFloat(localStorage.getItem('bc_height') || '40');
   
@@ -199,6 +204,7 @@
     const {data} = await db.from('users').select('*').eq('username',user).eq('password',pass).single();
     if(data){
       currentUserRole = data.role;
+      currentUserId = data.id; 
       document.getElementById('login-screen').style.display='none';
       if(currentUserRole === 'admin') {
         document.getElementById('nav-reports').style.display='flex';
@@ -229,7 +235,6 @@
     if(page==='storage') loadStorage();
     if(page==='settings') {
         loadEmployees();
-        // تحميل إعدادات الباركود في الخانات
         document.getElementById('barcode_width').value = bcWidth;
         document.getElementById('barcode_height').value = bcHeight;
     }
@@ -238,8 +243,12 @@
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
   async function init(){ 
-    const {data} = await db.from('warehouses').select('*').limit(1);
-    if(data && data.length > 0) defaultWarehouseId = data[0].id;
+    const {data:wh} = await db.from('warehouses').select('*').eq('code', 'MAIN-01').single();
+    if(wh) defaultWarehouseId = wh.id;
+
+    const {data:storageWh} = await db.from('warehouses').select('*').eq('code', 'STORAGE-01').single();
+    if(storageWh) storageWarehouseId = storageWh.id;
+
     await loadProducts(); 
   }
   
@@ -309,13 +318,10 @@
     showMessage('تم الحذف'); loadProducts();
   }
 
-  // شاشة المخزن المنفصل (مفيهاش اختيار مخزن)
   async function loadStorage(){
-    const {data} = await db.from('warehouses').select('id').limit(1);
-    if(!data || !data.length) return;
-    const wid = data[0].id;
+    if(!storageWarehouseId) return;
     
-    const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', wid);
+    const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', storageWarehouseId);
     const tbody = document.getElementById('storage-table');
     tbody.innerHTML = (stock||[]).map((s,i)=>{
       const p = allProducts.find(x=>x.id===s.product_id);
@@ -327,15 +333,13 @@
     const pid = document.getElementById('storage-product-select').value;
     const qty = parseInt(document.getElementById('storage-qty').value);
     if(!pid) return;
+    if(!storageWarehouseId) return showMessage('خطأ في المخزن المنفصل', true);
     
-    const {data} = await db.from('warehouses').select('id').limit(1);
-    const wid = data[0].id;
-    
-    const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',wid).eq('product_id',pid).maybeSingle();
+    const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',storageWarehouseId).eq('product_id',pid).maybeSingle();
     if(current) {
       await db.from('product_stock').update({quantity: current.quantity+qty}).eq('id',current.id);
     } else {
-      await db.from('product_stock').insert([{warehouse_id:wid, product_id:pid, quantity:qty}]);
+      await db.from('product_stock').insert([{warehouse_id:storageWarehouseId, product_id:pid, quantity:qty}]);
     }
     showMessage('تمت الإضافة للمخزن المنفصل');
     loadStorage();
@@ -352,7 +356,6 @@
     document.getElementById('employees-table').innerHTML = (data||[]).map((u,i)=>`<tr><td>${i+1}</td><td>${u.username}</td><td>${u.role}</td><td>${u.username==='amr'?'-':`<button class="btn" onclick="db.from('users').delete().eq('id',${u.id}).then(()=>loadEmployees())">حذف</button>`}</td></tr>`).join('');
   }
 
-  // دالة حفظ إعدادات الباركود
   function saveBarcodeSettings() {
       bcWidth = parseFloat(document.getElementById('barcode_width').value);
       bcHeight = parseFloat(document.getElementById('barcode_height').value);
@@ -417,6 +420,7 @@
     
     try {
       let total = 0;
+      // 1. حساب الإجمالي وتحديث المخزون
       for(let item of cart){
         total += item.default_sale_price * item.qty;
         const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',defaultWarehouseId).eq('product_id',item.id).single();
@@ -424,8 +428,32 @@
           await db.from('product_stock').update({quantity: current.quantity-item.qty}).eq('id',current.id);
         }
       }
+
+      // 2. حفظ الفاتورة في جدول المبيعات
+      const invoiceNo = 'INV-' + Date.now();
+      const {data: saleData, error: saleError} = await db.from('sales').insert([{
+          invoice_no: invoiceNo,
+          total: total,
+          user_id: currentUserId
+      }]).select().single();
+
+      if(saleError) throw saleError;
+
+      // 3. حفظ تفاصيل الفاتورة في جدول المبيعات
+      const itemsToInsert = cart.map(item => ({
+          sale_id: saleData.id,
+          product_id: item.id,
+          product_name: item.name,
+          quantity: item.qty,
+          price: item.default_sale_price,
+          total: item.default_sale_price * item.qty
+      }));
+
+      const {error: itemsError} = await db.from('sales_items').insert(itemsToInsert);
+      if(itemsError) throw itemsError;
       
-      printReceipt({id:Date.now(), total, items:cart});
+      // 4. طباعة الفاتورة
+      printReceipt({id:saleData.id, invoice_no: invoiceNo, total, items:cart});
       
       cart = [];
       renderCart();
@@ -437,7 +465,6 @@
     }
   }
 
-  // دالة الطباعة بعد التعديل (بتقرأ المقاس من الإعدادات)
   function printLabel(p){
     document.getElementById('receipt-window').innerHTML = `
       <div class="barcode-label">
@@ -448,7 +475,6 @@
       </div>`;
     document.getElementById('receipt-window').style.display='block';
     
-    // استخدام المقاسات المحفوظة
     JsBarcode("#bc", p.barcode, {
         format: "CODE128",
         width: bcWidth, 
@@ -484,7 +510,7 @@
         </div>
         
         <div class="inv-info">
-          <span>فاتورة: #${String(sale.id).slice(-5)}</span>
+          <span>فاتورة: ${sale.invoice_no}</span>
           <span>${dateStr}</span>
         </div>
         <div class="inv-info" style="border:none; padding:0;">
