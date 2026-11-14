@@ -75,9 +75,7 @@
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box input { margin-bottom: 12px; }
     
-    /* تصميم الفاتورة */
     .thermal-receipt { width: 80mm; margin: 0 auto; padding: 5mm; font-family: 'Cairo', sans-serif; font-size: 12px; color: #000; background: #fff; text-align: center; }
-    .thermal-receipt .header { margin-bottom: 5px; }
     .thermal-receipt .header h1 { font-family: 'Fredoka', sans-serif; font-size: 26px; margin: 0; font-weight: 800; }
     .thermal-receipt .header p { margin: 2px 0; font-size: 10px; color: #555; }
     .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 10px; margin: 8px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; }
@@ -88,12 +86,11 @@
     .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 2px 0; }
     .thermal-receipt .totals .grand-total { font-size: 16px; font-weight: bold; margin-top: 5px; }
     .thermal-receipt .footer { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; align-items: center; }
-    .thermal-receipt .footer img.logo { width: 50px; height: auto; margin-bottom: 5px; filter: grayscale(100%); } /* اللوجو بالأبيض والأسود عشان الطابعة الحرارية */
+    .thermal-receipt .footer img.logo { width: 50px; height: auto; margin-bottom: 5px; filter: grayscale(100%); }
     .thermal-receipt .footer svg { margin: 5px auto; display: block; }
     .thermal-receipt .qr-container { margin-top: 5px; }
     .thermal-receipt .qr-container img { width: 60px; height: 60px; }
 
-    /* تصميم ملصق الباركود */
     .barcode-label { width: 45mm; height: 28mm; padding: 1mm; box-sizing: border-box; text-align: center; margin: 0 auto; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
     .barcode-label h2 { font-size: 12px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
     .barcode-label .p-name { font-size: 9px; margin: 0; font-weight: bold; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -157,7 +154,8 @@
   </div>
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
-<script>
+<!-- ⚠️ متنسخش الجزء التاني هنا تحت على طول ⚠️ -->
+  <script>
   // ⚠️⚠️ حط هنا الرابط المباشر للصورة (اللي بيبدأ بـ https://i.postimg.cc/) ⚠️⚠️
   const LOGO_URL = 'https://i.postimg.cc/PLACEHOLDER/logo.png'; 
   // ⚠️ حط هنا لينك موقعك ⚠️
@@ -169,6 +167,7 @@
   let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null;
   let currentUserRole = '';
   
+  // 1. تسجيل الدخول
   async function login(){
     const user=document.getElementById('login-user').value.trim();
     const pass=document.getElementById('login-pass').value.trim();
@@ -194,6 +193,7 @@
     else if(pass!==null) alert('كلمة المرور خطأ!');
   }
 
+  // 2. التنقل
   function switchPage(page,button){
     document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
     document.getElementById('page-'+page).classList.add('active');
@@ -207,6 +207,7 @@
 
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
+  // 3. التشغيل
   async function init(){ 
     const {data} = await db.from('warehouses').select('*').limit(1);
     if(data && data.length > 0) defaultWarehouseId = data[0].id;
@@ -226,6 +227,7 @@
     document.getElementById('storage-product-select').innerHTML = allProducts.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   }
 
+  // 4. المخزن الرئيسي
   async function addProduct(){
     const name=document.getElementById('p_name').value.trim();
     let barcode=document.getElementById('p_barcode').value.trim();
@@ -279,6 +281,7 @@
     showMessage('تم الحذف'); loadProducts();
   }
 
+  // 5. المخزن المنفصل
   async function loadStorage(){
     const {data} = await db.from('warehouses').select('id').limit(1);
     if(!data || !data.length) return;
@@ -310,6 +313,7 @@
     loadStorage();
   }
 
+  // 6. الموظفين
   async function addEmployee(){
     const name=document.getElementById('u_name').value.trim(), pass=document.getElementById('u_pass').value.trim(), role=document.getElementById('u_role').value;
     if(!name||!pass) return;
@@ -321,6 +325,7 @@
     document.getElementById('employees-table').innerHTML = (data||[]).map((u,i)=>`<tr><td>${i+1}</td><td>${u.username}</td><td>${u.role}</td><td>${u.username==='amr'?'-':`<button class="btn" onclick="db.from('users').delete().eq('id',${u.id}).then(()=>loadEmployees())">حذف</button>`}</td></tr>`).join('');
   }
 
+  // 7. البيع
   function renderPOSProducts(){
     const query = (document.getElementById('pos-search').value || '').toLowerCase();
     const list = document.getElementById('pos-products-list');
@@ -362,6 +367,7 @@
     cart = []; renderCart(); loadProducts();
   }
 
+  // 8. الطباعة
   function printLabel(p){
     document.getElementById('receipt-window').innerHTML = `
       <div class="barcode-label">
