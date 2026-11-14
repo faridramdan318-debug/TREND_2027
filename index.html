@@ -6,7 +6,8 @@
   <title>TREND | نظام إدارة محل الألعاب</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <!-- مكتبة الباركود -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}
@@ -27,7 +28,7 @@
     .message{position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:20;padding:13px 20px;border-radius:13px;display:none;font-weight:700;font-size:13px;box-shadow:var(--shadow)}.message.show{display:block}.message.success{background:#e4f8ef;color:#14734f;border:1px solid #a9e6cc}.message.error{background:#fff0f1;color:#b43343;border:1px solid #ffbcc5}.menu-toggle{display:none}
     @media(max-width:900px){body{overflow:auto}.app{height:auto;min-height:100vh}.sidebar{width:225px}.main{padding:22px 18px}.pos-layout{grid-template-columns:1fr}.products{max-height:none}.cart{min-height:430px}.hero-art{font-size:48px}.grid-two{grid-template-columns:1fr}}
     @media(max-width:650px){.sidebar{position:fixed;right:-240px;top:0;height:100vh;transition:.25s}.sidebar.show{right:0}.menu-toggle{display:block;position:fixed;right:14px;top:13px;z-index:10;border:0;background:#302854;color:#fff;border-radius:12px;padding:9px 12px;font-size:20px}.main{padding-top:68px}.topbar{align-items:flex-start}.topbar h2{font-size:21px}.connection{display:none}.hero{padding:19px}.hero h3{font-size:18px}.hero-art{font-size:38px}.section-head{align-items:stretch;flex-direction:column;gap:10px}.search{width:100%}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product-card{padding:13px;min-height:150px}.form-row{flex-direction:column;gap:0}th,td{padding:10px 5px;font-size:11px}.table-wrap{overflow-x:auto}}
-    .image-upload{border:2px dashed #ddd4f6;border-radius:15px;padding:12px;text-align:center;background:#fcfbff}.image-upload input{border:0;padding:5px;background:transparent}.image-preview{display:none;width:72px;height:72px;object-fit:cover;border-radius:14px;margin:8px auto 0;border:3px solid #fff;box-shadow:0 5px 15px #ddd}.product-photo{width:52px;height:52px;border-radius:16px;object-fit:cover;background:#f5f2ff;display:block;margin-bottom:9px}.report-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.report-filters .form-group{min-width:170px;margin:0}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:22px}.stat{background:#fff;border:1px solid var(--line);border-radius:19px;padding:18px;box-shadow:var(--shadow)}.stat small{color:var(--muted);display:block}.stat strong{display:block;font-size:23px;margin-top:7px;color:var(--purple)}.stat:nth-child(2) strong{color:var(--green)}.stat:nth-child(3) strong{color:var(--pink)}.stat:nth-child(4) strong{color:#d09510}.report-table{max-height:390px;overflow:auto}.receipt-window{display:none}.print-only{display:none}.thermal-receipt{width:72mm;margin:0 auto;padding:10px 4px;color:#000;font-family:Arial,sans-serif;font-size:12px}.thermal-receipt .receipt-barcode{display:block;margin:8px auto 3px;max-width:64mm;height:38px}.barcode-label{width:72mm;margin:0 auto;padding:5mm 3mm;color:#000;background:#fff;font-family:Arial,sans-serif;text-align:center}.barcode-label .store-name{font-size:15px;font-weight:700;margin-bottom:2mm}.barcode-label .product-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.barcode-label .product-price{font-size:16px;font-weight:700;margin:1mm 0}.barcode-label svg{display:block;width:50mm;height:20mm;margin:1mm auto 0}.barcode-label .barcode-value{font-size:10px;letter-spacing:1px}.receipt-item-name{font-weight:700}.receipt-meta{font-size:10px;color:#333}.thermal-receipt h1{text-align:center;font-size:25px;margin:2px}.thermal-receipt h3{text-align:center;margin:0 0 10px}.thermal-receipt hr{border:0;border-top:1px dashed #000;margin:9px 0}.receipt-line{margin:4px 0}.receipt-row,.receipt-total{display:flex;justify-content:space-between;gap:8px;margin:7px 0}.receipt-total{font-size:16px}.thermal-receipt p{text-align:center;margin-top:18px}
+    .image-upload{border:2px dashed #ddd4f6;border-radius:15px;padding:12px;text-align:center;background:#fcfbff}.image-upload input{border:0;padding:5px;background:transparent}.image-preview{display:none;width:72px;height:72px;object-fit:cover;border-radius:14px;margin:8px auto 0;border:3px solid #fff;box-shadow:0 5px 15px #ddd}.product-photo{width:52px;height:52px;border-radius:16px;object-fit:cover;background:#f5f2ff;display:block;margin-bottom:9px}.report-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.report-filters .form-group{min-width:170px;margin:0}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:22px}.stat{background:#fff;border:1px solid var(--line);border-radius:19px;padding:18px;box-shadow:var(--shadow)}.stat small{color:var(--muted);display:block}.stat strong{display:block;font-size:23px;margin-top:7px;color:var(--purple)}.stat:nth-child(2) strong{color:var(--green)}.stat:nth-child(3) strong{color:var(--pink)}.stat:nth-child(4) strong{color:#d09510}.report-table{max-height:390px;overflow:auto}.receipt-window{display:none}.print-only{display:none}.thermal-receipt{width:72mm;margin:0 auto;padding:10px 4px;color:#000;font-family:Arial,sans-serif;font-size:12px}.thermal-receipt h1{text-align:center;font-size:25px;margin:2px}.thermal-receipt h3{text-align:center;margin:0 0 10px}.thermal-receipt hr{border:0;border-top:1px dashed #000;margin:9px 0}.receipt-line{margin:4px 0}.receipt-row,.receipt-total{display:flex;justify-content:space-between;gap:8px;margin:7px 0}.receipt-total{font-size:16px}.thermal-receipt p{text-align:center;margin-top:18px}
     @media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
     @media print{body>*{display:none!important}.receipt-window{display:block!important}.print-only{display:block}body.report-print .main{display:block!important;padding:18px!important}body.report-print .page{display:none!important}body.report-print #page-reports{display:block!important}body.report-print .sidebar,body.report-print .menu-toggle{display:none!important}body.report-print .hero,body.report-print .report-filters,body.report-print .stat-grid{display:none!important}body.report-print .card{box-shadow:none;border:0}}
     
@@ -35,6 +36,13 @@
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box h2 { color: var(--ink); margin-bottom: 20px; }
     .login-box input { margin-bottom: 12px; }
+    
+    /* تصميم الملصق */
+    .barcode-label { width: 50mm; height: 30mm; padding: 2mm; box-sizing: border-box; text-align: center; font-family: 'Cairo', sans-serif; margin: 0 auto; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: space-between; }
+    .barcode-label h2 { font-size: 14px; margin: 0; font-family: 'Fredoka', sans-serif; font-weight: bold; }
+    .barcode-label .product-name { font-size: 11px; margin: 0; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .barcode-label .price { font-size: 16px; font-weight: bold; margin: 0; }
+    .barcode-label svg { width: 100%; height: 35px; display: block; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -64,20 +72,25 @@
       <div id="message-box" class="message"></div>
       <div class="topbar"><div><div class="eyebrow">أهلاً بك في عالم اللعب</div><h2 id="page-title">نقطة البيع</h2></div><div class="connection"><i class="dot"></i> الربط يعمل بأمان</div></div>
       
+      <!-- صفحة البيع -->
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
-        <div class="pos-layout"><div><div class="section-head"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3>الألعاب المتاحة</h3><select id="pos-warehouse-select" onchange="changeWarehouse(this.value)" style="width:190px;padding:8px;border-radius:11px;border:1px solid var(--line)"></select><button class="btn secondary" style="padding:7px 11px" onclick="refreshPOS()">↻ تحديث</button></div><input class="search" id="pos-search" oninput="renderPOSProducts()" onkeydown="handleBarcodeScan(event)" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
+        <div class="pos-layout"><div><div class="section-head"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3>الألعاب المتاحة</h3><select id="pos-warehouse-select" onchange="changeWarehouse(this.value)" style="width:190px;padding:8px;border-radius:11px;border:1px solid var(--line)"></select><button class="btn secondary" style="padding:7px 11px" onclick="refreshPOS()">↻ تحديث</button></div><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث باسم اللعبة أو الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
       </section>
 
+      <!-- صفحة المخزن -->
       <section id="page-inventory" class="page">
         <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name" placeholder="مثال: سيارة سباق صغيرة"></div><div class="form-group"><label>الباركود / كود اللعبة</label><input id="p_barcode" placeholder="اختياري"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0" min="0" step="0.01"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0" min="0" step="0.01"></div></div><div class="form-group"><label>الكمية في المخزن *</label><input type="number" id="p_quantity" value="0" min="0" step="1" placeholder="اكتب الكمية المتاحة"></div><div class="form-group"><label>صورة الصنف</label><div class="image-upload"><input type="file" id="p_image" accept="image/*" onchange="previewImage(this)"><img id="image-preview" class="image-preview" alt="معاينة الصورة"></div></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والمخزون 🎈</button></div><div class="card"><h3>📦 إضافة صنف للمخزن</h3><p style="color:var(--muted);line-height:1.9;font-size:13px">لإنشاء مخزن جديد أو إضافة مخزون لمخزن منفصل، ادخل على شاشة <b>المخازن</b> من القائمة الجانبية.</p><button class="btn secondary full" onclick="openWarehouses()">فتح إدارة المخازن 🏬</button></div></div></div>
         <div class="card"><div class="section-head"><h3>📋 قائمة الألعاب والمخزون</h3><input class="search" id="inventory-search" oninput="renderInventoryTable()" placeholder="بحث في الأصناف..."></div><div class="table-wrap"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>الشراء</th><th>البيع</th><th>الرصيد في المخزن</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div>
       </section>
 
+      <!-- صفحة المخازن -->
       <section id="page-warehouses" class="page"><div class="hero"><div><h3>إدارة المخازن المنفصلة 🏬</h3><p>أنشئ مخزنًا مستقلًا وخزّن بداخله البضاعة بدون ظهورها في نقطة البيع.</p></div><div class="hero-art">🏬</div></div><div class="grid-two"><div class="card"><h3>إنشاء مخزن جديد</h3><div class="form-group"><label>اسم المخزن *</label><input id="nw_name" placeholder="مثال: مخزن التخزين الخلفي"></div><div class="form-group"><label>كود المخزن</label><input id="nw_code" placeholder="مثال: BACK-01"></div><button class="btn full" onclick="createStorageWarehouse()">إنشاء المخزن وحفظه</button></div><div class="card"><h3>إضافة بضاعة لمخزن</h3><div class="form-group"><label>اختر المخزن</label><select id="storage-warehouse-select"></select></div><div class="form-group"><label>الصنف</label><select id="storage-product-select"></select></div><div class="form-group"><label>الكمية المراد إضافتها</label><input type="number" id="storage-qty" min="1" value="1"></div><button class="btn secondary full" onclick="receiveStock()">إضافة الكمية للمخزن</button></div></div><div class="card"><div class="section-head"><h3>المخازن الموجودة</h3><button class="btn secondary" style="padding:7px 11px" onclick="renderWarehousePage()">↻ تحديث</button></div><div class="table-wrap"><table><thead><tr><th>المخزن</th><th>الكود</th><th>حالة البيع</th><th>إجراء</th></tr></thead><tbody id="warehouses-table"></tbody></table></div></div></section>
 
+      <!-- صفحة التقارير -->
       <section id="page-reports" class="page"><div class="hero"><div><h3>التقرير المالي والمبيعات 📊</h3><p>تابع إجمالي المبيعات، التكلفة، وصافي الربح بالتاريخ الذي تختاره.</p></div><div class="hero-art">💰</div></div><div class="card"><div class="report-filters"><div class="form-group"><label>من تاريخ</label><input type="date" id="report-from"></div><div class="form-group"><label>إلى تاريخ</label><input type="date" id="report-to"></div><button class="btn" onclick="renderReports()">تحديث التقرير</button><button class="btn secondary" onclick="printReport()">طباعة التقرير</button></div></div><div class="stat-grid"><div class="stat"><small>إجمالي المبيعات</small><strong id="report-sales">0.00 ج.م</strong></div><div class="stat"><small>صافي الربح</small><strong id="report-profit">0.00 ج.م</strong></div><div class="stat"><small>عدد الفواتير</small><strong id="report-invoices">0</strong></div><div class="stat"><small>عدد القطع المباعة</small><strong id="report-items">0</strong></div></div><div class="card"><div class="section-head"><h3>تفاصيل المبيعات</h3><span class="badge">سجل TREND</span></div><div class="report-table"><table><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الأصناف</th><th>الإجمالي</th><th>الربح</th><th></th></tr></thead><tbody id="reports-table"></tbody></table></div></div></section>
 
+      <!-- صفحة الإعدادات -->
       <section id="page-settings" class="page">
         <div class="hero"><div><h3>إعدادات الموظفين ⚙️</h3><p>إدارة حسابات الكاشير والمدير.</p></div><div class="hero-art">⚙️</div></div>
         <div class="card">
@@ -95,11 +108,6 @@
             <table><thead><tr><th>#</th><th>اسم المستخدم</th><th>الصلاحية</th><th>إجراء</th></tr></thead><tbody id="employees-table"></tbody></table>
           </div>
         </div>
-        <div class="card">
-          <h3>🏪 بيانات المتجر والطباعة</h3>
-          <div class="form-group"><label>اسم المتجر الذي يظهر على الفاتورة وملصق الباركود</label><input id="store-name" placeholder="TREND"></div>
-          <button class="btn secondary" onclick="saveStoreName()">حفظ اسم المتجر</button>
-        </div>
       </section>
     </main>
   </div>
@@ -113,7 +121,6 @@
   let salesLog=JSON.parse(localStorage.getItem('trend_sales_log')||'[]');
   let hiddenWarehouses=JSON.parse(localStorage.getItem('trend_hidden_warehouses')||'[]');
   let currentUserRole = '';
-  let storeName = localStorage.getItem('trend_store_name') || 'TREND';
   const icons=['🧸','🚗','🧩','🎨','🚂','🪁','🎲','🦄','🤖','🎸'];
 
   async function login(){
@@ -124,7 +131,6 @@
       currentUserRole = data.role;
       document.getElementById('login-screen').style.display='none';
       
-      // تطبيق الصلاحيات: المدير بس هو اللي بيشوف التقارير والإعدادات
       if(currentUserRole === 'admin') {
         document.getElementById('nav-reports').style.display='flex';
         document.getElementById('nav-settings').style.display='flex';
@@ -181,7 +187,7 @@
   }
   
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');clearTimeout(window.messageTimer);window.messageTimer=setTimeout(()=>box.classList.remove('show'),5000)}
-  async function init(){try{const storeInput=document.getElementById('store-name');if(storeInput)storeInput.value=storeName;await loadWarehouses();await loadProducts()}catch(error){showMessage('خطأ في الاتصال بقاعدة البيانات: '+error.message,true)}}
+  async function init(){try{await loadWarehouses();await loadProducts()}catch(error){showMessage('خطأ في الاتصال بقاعدة البيانات: '+error.message,true)}}
   function openWarehouses(){const btn=document.querySelector('[data-page="warehouses"]');switchPage('warehouses',btn)}
   function sellableWarehouses(){return warehouses.filter(w=>!hiddenWarehouses.map(String).includes(String(w.id)))}
   function renderWarehousePage(){const ws=document.getElementById('warehouses-table'),select=document.getElementById('storage-warehouse-select'),productSelect=document.getElementById('storage-product-select');if(!ws)return;const storageOptions=warehouses.map(w=>`<option value="${w.id}">${escapeHtml(w.name)}${w.code?' - '+escapeHtml(w.code):''}</option>`).join('');if(select)select.innerHTML=storageOptions||'<option>لا توجد مخازن</option>';if(productSelect)productSelect.innerHTML=allProducts.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')||'<option>لا توجد أصناف</option>';ws.innerHTML=warehouses.length?warehouses.map(w=>{const hidden=hiddenWarehouses.map(String).includes(String(w.id));return `<tr><td><b>${escapeHtml(w.name)}</b></td><td>${escapeHtml(w.code||'-')}</td><td><span class="badge ${hidden?'low':''}">${hidden?'مخفي من البيع':'ظاهر في البيع'}</span></td><td><button class="btn secondary" style="padding:7px 10px" onclick="toggleWarehouseSale(${w.id})">${hidden?'إظهار للبيع':'إخفاء من البيع'}</button></td></tr>`}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:25px">لا توجد مخازن</td></tr>'}
@@ -198,29 +204,245 @@
   function imageFor(product){return product.image_url||productImages[product.id]||''}
   function readImage(){return new Promise(resolve=>{const file=document.getElementById('p_image')?.files?.[0];if(!file)return resolve('');const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(file)})}
   function dateText(value){return new Date(value).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})}
-  function saveSale(total){const sale={id:'TR-'+Date.now(),created_at:new Date().toISOString(),total:Number(total),warehouse_id:selectedWarehouseId||defaultWarehouseId,store_name:storeName,items:cart.map(x=>({id:x.id,name:x.name,barcode:x.barcode||'',qty:x.qty,sale:Number(x.default_sale_price),purchase:Number(x.default_purchase_price)}))};salesLog.unshift(sale);localStorage.setItem('trend_sales_log',JSON.stringify(salesLog));return sale}
-  function saveStoreName(){const value=document.getElementById('store-name')?.value.trim();if(!value)return showMessage('اكتب اسم المتجر أولاً',true);storeName=value;localStorage.setItem('trend_store_name',storeName);showMessage('تم حفظ اسم المتجر وسيظهر في الفواتير والملصقات')}
-
+  function saveSale(total){const sale={id:'TR-'+Date.now(),created_at:new Date().toISOString(),total:Number(total),items:cart.map(x=>({id:x.id,name:x.name,qty:x.qty,sale:Number(x.default_sale_price),purchase:Number(x.default_purchase_price)}))};salesLog.unshift(sale);localStorage.setItem('trend_sales_log',JSON.stringify(salesLog));return sale}
   function filterSales(){const from=document.getElementById('report-from')?.value,to=document.getElementById('report-to')?.value;return salesLog.filter(sale=>{const d=sale.created_at.slice(0,10);return (!from||d>=from)&&(!to||d<=to)})}
   function renderReports(){const rows=document.getElementById('reports-table');if(!rows)return;const sales=filterSales();let revenue=0,profit=0,items=0;sales.forEach(sale=>{revenue+=sale.total;items+=sale.items.reduce((a,x)=>a+x.qty,0);profit+=sale.items.reduce((a,x)=>a+(x.sale-x.purchase)*x.qty,0)});document.getElementById('report-sales').textContent=money(revenue);document.getElementById('report-profit').textContent=money(profit);document.getElementById('report-invoices').textContent=sales.length;document.getElementById('report-items').textContent=items;rows.innerHTML=sales.length?sales.map(sale=>`<tr><td><b>${sale.id}</b></td><td>${dateText(sale.created_at)}</td><td>${sale.items.reduce((a,x)=>a+x.qty,0)} قطعة</td><td>${money(sale.total)}</td><td><span class="badge">${money(sale.items.reduce((a,x)=>a+(x.sale-x.purchase)*x.qty,0))}</span></td><td><button class="btn secondary" style="padding:7px 10px" onclick="printSale('${sale.id}')">فاتورة</button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">لا توجد مبيعات في الفترة المحددة</td></tr>'}
   function printReport(){document.body.classList.add('report-print');setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove('report-print'),300)},80)}
   function printSale(id){const sale=salesLog.find(x=>x.id===id);if(sale){buildReceipt(sale);setTimeout(()=>window.print(),80)}}
-  function buildReceipt(sale){document.getElementById('receipt-window').innerHTML=`<div class="thermal-receipt" dir="rtl"><h1>${escapeHtml(sale.store_name||storeName)}</h1><h3>فاتورة مبيعات</h3><div class="receipt-line">رقم الفاتورة: ${escapeHtml(sale.id)}</div><div class="receipt-line">التاريخ: ${dateText(sale.created_at)}</div><div class="receipt-line">المخزن: ${escapeHtml(warehouses.find(w=>String(w.id)===String(sale.warehouse_id))?.name||'الرئيسي')}</div><hr>${sale.items.map(x=>`<div class="receipt-row"><span><span class="receipt-item-name">${escapeHtml(x.name)}</span><br><span class="receipt-meta">${escapeHtml(x.barcode||'بدون باركود')} × ${x.qty}</span></span><b>${money(x.sale*x.qty)}</b></div>`).join('')}<hr><div class="receipt-total"><span>الإجمالي</span><b>${money(sale.total)}</b></div><p>شكراً لتسوقكم من ${escapeHtml(sale.store_name||storeName)}</p></div>`}
-  function printProductLabel(id){const product=allProducts.find(x=>x.id===id);if(!product)return;const code=product.barcode||'';document.getElementById('receipt-window').innerHTML=`<div class="barcode-label" dir="rtl"><div class="store-name">${escapeHtml(storeName)}</div><div class="product-name">${escapeHtml(product.name)}</div><div class="product-price">${money(product.default_sale_price)}</div><svg id="print-barcode"></svg><div class="barcode-value">${escapeHtml(code)}</div></div>`;try{JsBarcode('#print-barcode',code,{format:'CODE128',displayValue:false,lineColor:'#000',width:2,height:55,margin:0})}catch(e){showMessage('الباركود غير صالح للطباعة: '+e.message,true);return}setTimeout(()=>window.print(),100)}
+  function buildReceipt(sale){document.getElementById('receipt-window').innerHTML=`<div class="thermal-receipt" dir="rtl"><h1>TREND</h1><h3>فاتورة مبيعات</h3><div class="receipt-line">رقم الفاتورة: ${sale.id}</div><div class="receipt-line">التاريخ: ${dateText(sale.created_at)}</div><hr>${sale.items.map(x=>`<div class="receipt-row"><span>${escapeHtml(x.name)} × ${x.qty}</span><b>${money(x.sale*x.qty)}</b></div>`).join('')}<hr><div class="receipt-total"><span>الإجمالي</span><b>${money(sale.total)}</b></div><p>شكراً لتسوقكم من TREND</p></div>`}
+  
+  async function addProduct(){
+    const name=document.getElementById('p_name').value.trim(),quantity=Math.max(0,parseInt(document.getElementById('p_quantity').value,10)||0);
+    const barcode=document.getElementById('p_barcode').value.trim()||null;
+    if(!name)return showMessage('اكتب اسم اللعبة أولاً',true);
+    
+    try{
+      if(!defaultWarehouseId){const warehouseResult=await db.from('warehouses').select('id').order('id',{ascending:true}).limit(1);if(warehouseResult.error)throw new Error('تعذر قراءة المخازن: '+warehouseResult.error.message);if(warehouseResult.data?.length)defaultWarehouseId=warehouseResult.data[0].id}
+      if(!defaultWarehouseId)return showMessage('لا يوجد مخزن. أضف مخزناً من خانة إضافة مخزن جديد أولاً',true);
+      
+      const product={name,barcode,default_purchase_price:parseFloat(document.getElementById('p_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('p_sale').value)||0};
+      const {data,error}=await db.from('products').insert([product]).select('id').single();
+      
+      if(error)throw new Error('تعذر حفظ الصنف في جدول products: '+error.message);
+      if(!data?.id)throw new Error('تم حفظ الصنف بدون رقم تعريف، راجع صلاحيات جدول products');
+      
+      const image=await readImage();
+      if(image){productImages[data.id]=image;localStorage.setItem('trend_product_images',JSON.stringify(productImages));try{await db.from('products').update({image_url:image}).eq('id',data.id)}catch(_){}}
+      
+      const stockResult=await db.from('product_stock').insert([{product_id:data.id,warehouse_id:defaultWarehouseId,quantity}]);
+      if(stockResult.error)throw new Error('تم حفظ الصنف لكن تعذر ربطه بالمخزن: '+stockResult.error.message);
+      
+      ['p_name','p_barcode'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('p_purchase').value='0';
+      document.getElementById('p_sale').value='0';
+      document.getElementById('p_quantity').value='0';
+      document.getElementById('p_image').value='';
+      document.getElementById('image-preview').style.display='none';
+      
+      showMessage('تم حفظ اللعبة وربطها بالمخزن والكمية بنجاح 🎉');
+      await loadProducts();
+      
+      // عرض الملصق بعد الحفظ مباشرة
+      showBarcodeLabel(product);
+      
+    }catch(error){showMessage(error.message||'تعذر حفظ اللعبة',true)}
+  }
 
-  async function addProduct(){const name=document.getElementById('p_name').value.trim(),quantity=Math.max(0,parseInt(document.getElementById('p_quantity').value,10)||0);if(!name)return showMessage('اكتب اسم اللعبة أولاً',true);try{const warehouseId=selectedWarehouseId||defaultWarehouseId;if(!warehouseId)return showMessage('لا يوجد مخزن. أضف مخزناً من خانة إدارة المخازن أولاً',true);let barcode=document.getElementById('p_barcode').value.trim();if(barcode&&!/^[ -~]+$/.test(barcode))return showMessage('الباركود اليدوي يجب أن يحتوي على أرقام أو حروف إنجليزية فقط',true);if(barcode){const duplicate=await db.from('products').select('id').eq('barcode',barcode).maybeSingle();if(duplicate.error)throw duplicate.error;if(duplicate.data)return showMessage('هذا الباركود مستخدم بالفعل لصنف آخر',true)}const product={name,barcode:barcode||null,default_purchase_price:parseFloat(document.getElementById('p_purchase').value)||0,default_sale_price:parseFloat(document.getElementById('p_sale').value)||0};const {data,error}=await db.from('products').insert([product]).select('id').single();if(error)throw new Error('تعذر حفظ الصنف في جدول products: '+error.message);if(!data?.id)throw new Error('تم حفظ الصنف بدون رقم تعريف');if(!barcode){barcode='200'+String(data.id).padStart(9,'0');const codeResult=await db.from('products').update({barcode}).eq('id',data.id);if(codeResult.error)throw new Error('تم حفظ الصنف لكن تعذر إنشاء الباركود: '+codeResult.error.message)}const image=await readImage();if(image){productImages[data.id]=image;localStorage.setItem('trend_product_images',JSON.stringify(productImages));try{await db.from('products').update({image_url:image}).eq('id',data.id)}catch(_){}}const stockResult=await db.from('product_stock').insert([{product_id:data.id,warehouse_id:warehouseId,quantity}]);if(stockResult.error)throw new Error('تم حفظ الصنف لكن تعذر ربطه بالمخزن: '+stockResult.error.message);['p_name','p_barcode'].forEach(id=>document.getElementById(id).value='');document.getElementById('p_purchase').value='0';document.getElementById('p_sale').value='0';document.getElementById('p_quantity').value='0';document.getElementById('p_image').value='';document.getElementById('image-preview').style.display='none';showMessage('تم حفظ الصنف وإنشاء الباركود: '+barcode+' 🎉');await loadProducts()}
-  catch(error){showMessage(error.message||'تعذر حفظ الصنف',true)}}
+  // دالة عرض وطباعة ملصق الباركود
+  function showBarcodeLabel(product){
+    if(!product.barcode) {
+      showMessage('تم الحفظ، ولكن لا يوجد باركود لطباعته', true);
+      return;
+    }
+    
+    const labelHtml = `
+      <div class="barcode-label">
+        <h2>TREND</h2>
+        <p class="product-name">${escapeHtml(product.name)}</p>
+        <p class="price">${money(product.default_sale_price)}</p>
+        <svg id="barcode-svg"></svg>
+      </div>
+    `;
+    
+    document.getElementById('receipt-window').innerHTML = `<div class="thermal-receipt print-only" style="width:auto;margin-top:10px;">${labelHtml}</div>`;
+    
+    // توليد الباركود
+    JsBarcode("#barcode-svg", product.barcode, {
+      format: "CODE128",
+      lineColor: "#000",
+      width: 1.5,
+      height: 40,
+      displayValue: true,
+      fontSize: 12,
+      margin: 0
+    });
+    
+    // فتح نافذة الطباعة
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  }
 
-  async function addWarehouse(){const name=document.getElementById('w_name').value.trim();if(!name)return showMessage('اكتب اسم المخزن أولاً',true);try{const {data,error}=await db.from('warehouses').insert([{name,code:document.getElementById('w_code').value.trim()||null}]).select().single();if(error)throw error;if(!defaultWarehouseId)defaultWarehouseId=data.id;if(!selectedWarehouseId){selectedWarehouseId=data.id}await loadWarehouses();document.getElementById('w_name').value='';document.getElementById('w_code').value='';showMessage('تم حفظ المخزن بنجاح 🏬')}catch(error){showMessage('تعذر حفظ المخزن: '+error.message,true)}}
-  function renderInventoryTable(){const body=document.getElementById('inventory-table'),query=(document.getElementById('inventory-search')?.value||'').toLowerCase();const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));if(!products.length){body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد أصناف مطابقة</td></tr>';return}body.innerHTML=products.map((p,i)=>{const stock=stockByProduct[p.id]||0;return `<tr><td>${i+1}</td><td><b>${escapeHtml(p.name)}</b></td><td>${escapeHtml(p.barcode||'-')}</td><td>${money(p.default_purchase_price)}</td><td>${money(p.default_sale_price)}</td><td><span class="badge ${stock<=3?'low':''}">${stock} قطعة</span></td><td><button class="btn secondary" style="padding:6px 9px" onclick="printProductLabel(${p.id})">باركود</button> <button class="btn secondary" style="padding:6px 9px" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:6px 9px;background:var(--red)" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button></td></tr>`}).join('')}
-  async function editProduct(id){const p=allProducts.find(x=>x.id===id);if(!p)return;const name=prompt('اسم الصنف:',p.name);if(name===null)return;const sale=prompt('سعر البيع:',p.default_sale_price);if(sale===null)return;const purchase=prompt('سعر الشراء:',p.default_purchase_price);if(purchase===null)return;const qty=prompt('الكمية في المخزن المحدد:',stockByProduct[id]||0);if(qty===null)return;try{const result=await db.from('products').update({name:name.trim(),default_sale_price:Number(sale)||0,default_purchase_price:Number(purchase)||0}).eq('id',id);if(result.error)throw result.error;const stock=await db.from('product_stock').select('id').eq('product_id',id).eq('warehouse_id',selectedWarehouseId||defaultWarehouseId).maybeSingle();if(stock.error)throw stock.error;let stockResult;if(stock.data)stockResult=await db.from('product_stock').update({quantity:Math.max(0,Number(qty)||0)}).eq('id',stock.data.id);else stockResult=await db.from('product_stock').insert([{product_id:id,warehouse_id:selectedWarehouseId||defaultWarehouseId,quantity:Math.max(0,Number(qty)||0)}]);if(stockResult.error)throw stockResult.error;showMessage('تم تعديل الصنف ورصيده بنجاح');await loadProducts()}catch(error){showMessage('تعذر تعديل الصنف: '+error.message,true)}}
-  async function deleteProduct(id){const p=allProducts.find(x=>x.id===id);if(!p||!confirm('حذف '+p.name+' من الأصناف والمخزن؟ لا يمكن التراجع عن ذلك.'))return;try{const stock=await db.from('product_stock').delete().eq('product_id',id);if(stock.error)throw stock.error;const result=await db.from('products').delete().eq('id',id);if(result.error)throw result.error;showMessage('تم حذف الصنف من النظام');await loadProducts()}catch(error){showMessage('تعذر حذف الصنف: '+error.message,true)}}
-  function renderPOSProducts(){const list=document.getElementById('pos-products-list'),query=(document.getElementById('pos-search')?.value||'').toLowerCase();const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));if(!products.length){list.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد لعبة بهذا الاسم</div>';return}list.innerHTML=products.map((p,i)=>{const stock=stockByProduct[p.id]||0;return `<div class="product-card" style="--accent:${["#47c6d9","#ff6f91","#ffc857","#7c5cff"][i%4]}" onclick="addToCart(${p.id})"><div>${imageFor(p)?`<img class="product-photo" src="${imageFor(p)}" alt="">`:`<div class="toy-icon">${icons[i%icons.length]}</div>`}<h4>${escapeHtml(p.name)}</h4><div class="price">${money(p.default_sale_price)}</div></div><div class="stock ${stock<=3?'low':''}">${stock>0?'متاح: '+stock+' قطعة':'غير متوفر'}</div></div>`}).join('')}
-  function handleBarcodeScan(event){if(event.key!=='Enter')return;const input=event.target,code=input.value.trim();if(!code)return;const product=allProducts.find(p=>String(p.barcode||'').trim()===code);if(product){event.preventDefault();addToCart(product.id);input.value='';renderPOSProducts()}else showMessage('لم يتم العثور على صنف بهذا الباركود',true)}
-  function addToCart(id){const product=allProducts.find(p=>p.id===id),stock=stockByProduct[id]||0;if(!product||stock<=0)return showMessage('هذه اللعبة غير متوفرة حالياً',true);const item=cart.find(x=>x.id===id);if(item&&item.qty>=stock)return showMessage('لا يمكن تجاوز الكمية الموجودة في المخزن',true);item?item.qty++:cart.push({...product,qty:1});renderCart()}
-  function updateQty(index,delta){const item=cart[index],stock=stockByProduct[item.id]||0;if(delta>0&&item.qty>=stock)return showMessage('الكمية المتاحة في المخزن انتهت',true);item.qty+=delta;if(item.qty<=0)cart.splice(index,1);renderCart()}
-  function renderCart(){const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total');if(!cart.length){box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';totalBox.textContent='0.00 ج.م';document.getElementById('cart-count').textContent='0 ألعاب';return}let total=0,count=0;box.innerHTML=cart.map((item,index)=>{total+=Number(item.default_sale_price)*item.qty;count+=item.qty;return `<div class="cart-item"><div><h5>${escapeHtml(item.name)}</h5><small>${money(item.default_sale_price)} × ${item.qty}</small></div><div class="controls"><button onclick="updateQty(${index},-1)">−</button><b>${item.qty}</b><button onclick="updateQty(${index},1)">+</button></div></div>`}).join('');totalBox.textContent=money(total);document.getElementById('cart-count').textContent=count+' ألعاب'}
-  async function checkout(){if(!cart.length)return showMessage('السلة فارغة',true);const warehouseId=selectedWarehouseId||defaultWarehouseId;if(!warehouseId)return showMessage('يجب إضافة مخزن أولاً',true);try{for(const item of cart){const {data,error}=await db.from('product_stock').select('*').eq('product_id',item.id).eq('warehouse_id',warehouseId).single();if(error&&error.code!=='PGRST116')throw error;if(!data||Number(data.quantity)<item.qty)throw new Error('الرصيد غير كافٍ للصنف: '+item.name);const result=await db.from('product_stock').update({quantity:Number(data.quantity)-item.qty}).eq('id',data.id);if(result.error)throw result.error}const total=cart.reduce((sum,item)=>sum+Number(item.default_sale_price)*item.qty,0);const sale=saveSale(total);buildReceipt(sale);cart=[];showMessage('تم البيع وتحديث المخزون بنجاح! الإجمالي: '+money(total));await loadProducts();renderCart();setTimeout(()=>window.print(),100)}catch(error){showMessage(error.message||'حدث خطأ أثناء البيع',true)}}
+  async function addWarehouse(){
+    const name=document.getElementById('w_name').value.trim();
+    if(!name)return showMessage('اكتب اسم المخزن أولاً',true);
+    try{
+      const {data,error}=await db.from('warehouses').insert([{name,code:document.getElementById('w_code').value.trim()||null}]).select().single();
+      if(error)throw error;
+      if(!defaultWarehouseId)defaultWarehouseId=data.id;
+      if(!selectedWarehouseId){selectedWarehouseId=data.id}
+      await loadWarehouses();
+      document.getElementById('w_name').value='';
+      document.getElementById('w_code').value='';
+      showMessage('تم حفظ المخزن بنجاح 🏬')
+    }catch(error){showMessage('تعذر حفظ المخزن: '+error.message,true)}
+  }
+
+  function renderInventoryTable(){
+    const body=document.getElementById('inventory-table'),query=(document.getElementById('inventory-search')?.value||'').toLowerCase();
+    const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));
+    if(!products.length){
+      body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد أصناف مطابقة</td></tr>';
+      return;
+    }
+    body.innerHTML=products.map((p,i)=>{
+      const stock=stockByProduct[p.id]||0;
+      return `<tr>
+        <td>${i+1}</td>
+        <td><b>${escapeHtml(p.name)}</b></td>
+        <td>${escapeHtml(p.barcode||'-')}</td>
+        <td>${money(p.default_purchase_price)}</td>
+        <td>${money(p.default_sale_price)}</td>
+        <td><span class="badge ${stock<=3?'low':''}">${stock} قطعة</span></td>
+        <td>
+          <button class="btn secondary" style="padding:6px 9px" onclick="showBarcodeLabel({name:'${escapeHtml(p.name)}', default_sale_price:${p.default_sale_price}, barcode:'${p.barcode}'})">🏷️ باركود</button>
+          <button class="btn secondary" style="padding:6px 9px" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button>
+          <button class="btn" style="padding:6px 9px;background:var(--red)" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button>
+        </td>
+      </tr>`
+    }).join('');
+  }
+
+  async function editProduct(id){
+    const p=allProducts.find(x=>x.id===id);
+    if(!p)return;
+    const name=prompt('اسم الصنف:',p.name);
+    if(name===null)return;
+    const sale=prompt('سعر البيع:',p.default_sale_price);
+    if(sale===null)return;
+    const purchase=prompt('سعر الشراء:',p.default_purchase_price);
+    if(purchase===null)return;
+    const qty=prompt('الكمية في المخزن المحدد:',stockByProduct[id]||0);
+    if(qty===null)return;
+    try{
+      const result=await db.from('products').update({name:name.trim(),default_sale_price:Number(sale)||0,default_purchase_price:Number(purchase)||0}).eq('id',id);
+      if(result.error)throw result.error;
+      const stock=await db.from('product_stock').select('id').eq('product_id',id).eq('warehouse_id',selectedWarehouseId||defaultWarehouseId).maybeSingle();
+      if(stock.error)throw stock.error;
+      let stockResult;
+      if(stock.data)stockResult=await db.from('product_stock').update({quantity:Math.max(0,Number(qty)||0)}).eq('id',stock.data.id);
+      else stockResult=await db.from('product_stock').insert([{product_id:id,warehouse_id:selectedWarehouseId||defaultWarehouseId,quantity:Math.max(0,Number(qty)||0)}]);
+      if(stockResult.error)throw stockResult.error;
+      showMessage('تم تعديل الصنف ورصيده بنجاح');
+      await loadProducts();
+    }catch(error){showMessage('تعذر تعديل الصنف: '+error.message,true)}
+  }
+
+  async function deleteProduct(id){
+    const p=allProducts.find(x=>x.id===id);
+    if(!p||!confirm('حذف '+p.name+' من الأصناف والمخزن؟ لا يمكن التراجع عن ذلك.'))return;
+    try{
+      const stock=await db.from('product_stock').delete().eq('product_id',id);
+      if(stock.error)throw stock.error;
+      const result=await db.from('products').delete().eq('id',id);
+      if(result.error)throw result.error;
+      showMessage('تم حذف الصنف من النظام');
+      await loadProducts();
+    }catch(error){showMessage('تعذر حذف الصنف: '+error.message,true)}
+  }
+
+  function renderPOSProducts(){
+    const list=document.getElementById('pos-products-list'),query=(document.getElementById('pos-search')?.value||'').toLowerCase();
+    const products=allProducts.filter(p=>(p.name+' '+(p.barcode||'')).toLowerCase().includes(query));
+    if(!products.length){
+      list.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد لعبة بهذا الاسم</div>';
+      return;
+    }
+    list.innerHTML=products.map((p,i)=>{
+      const stock=stockByProduct[p.id]||0;
+      return `<div class="product-card" style="--accent:${["#47c6d9","#ff6f91","#ffc857","#7c5cff"][i%4]}" onclick="addToCart(${p.id})">
+        <div>
+          ${imageFor(p)?`<img class="product-photo" src="${imageFor(p)}" alt="">`:`<div class="toy-icon">${icons[i%icons.length]}</div>`}
+          <h4>${escapeHtml(p.name)}</h4>
+          <div class="price">${money(p.default_sale_price)}</div>
+        </div>
+        <div class="stock ${stock<=3?'low':''}">${stock>0?'متاح: '+stock+' قطعة':'غير متوفر'}</div>
+      </div>`
+    }).join('');
+  }
+
+  function addToCart(id){
+    const product=allProducts.find(p=>p.id===id),stock=stockByProduct[id]||0;
+    if(!product||stock<=0)return showMessage('هذه اللعبة غير متوفرة حالياً',true);
+    const item=cart.find(x=>x.id===id);
+    if(item&&item.qty>=stock)return showMessage('لا يمكن تجاوز الكمية الموجودة في المخزن',true);
+    item?item.qty++:cart.push({...product,qty:1});
+    renderCart();
+  }
+
+  function updateQty(index,delta){
+    const item=cart[index],stock=stockByProduct[item.id]||0;
+    if(delta>0&&item.qty>=stock)return showMessage('الكمية المتاحة في المخزن انتهت',true);
+    item.qty+=delta;
+    if(item.qty<=0)cart.splice(index,1);
+    renderCart();
+  }
+
+  function renderCart(){
+    const box=document.getElementById('cart-items'),totalBox=document.getElementById('cart-total');
+    if(!cart.length){
+      box.innerHTML='<div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div>';
+      totalBox.textContent='0.00 ج.م';
+      document.getElementById('cart-count').textContent='0 ألعاب';
+      return;
+    }
+    let total=0,count=0;
+    box.innerHTML=cart.map((item,index)=>{
+      total+=Number(item.default_sale_price)*item.qty;
+      count+=item.qty;
+      return `<div class="cart-item">
+        <div><h5>${escapeHtml(item.name)}</h5><small>${money(item.default_sale_price)} × ${item.qty}</small></div>
+        <div class="controls">
+          <button onclick="updateQty(${index},-1)">−</button><b>${item.qty}</b><button onclick="updateQty(${index},1)">+</button>
+        </div>
+      </div>`
+    }).join('');
+    totalBox.textContent=money(total);
+    document.getElementById('cart-count').textContent=count+' ألعاب';
+  }
+
+  async function checkout(){
+    if(!cart.length)return showMessage('السلة فارغة',true);
+    if(!defaultWarehouseId)return showMessage('يجب إضافة مخزن أولاً',true);
+    try{
+      for(const item of cart){
+        const {data,error}=await db.from('product_stock').select('*').eq('product_id',item.id).eq('warehouse_id',defaultWarehouseId).single();
+        if(error&&error.code!=='PGRST116')throw error;
+        if(!data||Number(data.quantity)<item.qty)throw new Error('الرصيد غير كافٍ للصنف: '+item.name);
+        const result=await db.from('product_stock').update({quantity:Number(data.quantity)-item.qty}).eq('id',data.id);
+        if(result.error)throw result.error;
+      }
+      const total=cart.reduce((sum,item)=>sum+Number(item.default_sale_price)*item.qty,0);
+      const sale=saveSale(total);
+      buildReceipt(sale);
+      cart=[];
+      showMessage('تم البيع وتحديث المخزون بنجاح! الإجمالي: '+money(total));
+      await loadProducts();
+      renderCart();
+      setTimeout(()=>window.print(),100);
+    }catch(error){showMessage(error.message||'حدث خطأ أثناء البيع',true)}
+  }
+
   function money(value){return Number(value||0).toFixed(2)+' ج.م'}
   function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
   window.onload=init;
