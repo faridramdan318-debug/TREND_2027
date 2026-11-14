@@ -37,12 +37,34 @@
     .pos-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,.75fr);gap:24px}
     .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .search{width:250px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 14px;outline:none}
-    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:15px;max-height:calc(100vh - 265px);overflow-y:auto}
-    .product-card{background:var(--panel);border:1px solid var(--line);border-radius:21px;padding:18px;min-height:160px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;transition:.22s;box-shadow:0 8px 22px rgba(77,55,111,.05)}
-    .product-card:hover{transform:translateY(-5px);box-shadow:0 16px 30px rgba(77,55,111,.13)}
-    .product-card h4{font-size:15px;margin-bottom:6px}
-    .price{color:var(--purple);font-size:18px;font-weight:800}
-    .stock{font-size:11px;color:var(--muted);margin-top:7px}
+    
+    /* تصميم المنتجات الجديد زي الصورة */
+    .products { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; max-height: calc(100vh - 265px); overflow-y: auto; padding: 5px; }
+    
+    .product-card { 
+        background: #fff; 
+        border: 1px solid var(--line); 
+        border-radius: 20px; 
+        padding: 20px 15px; 
+        cursor: pointer; 
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+        position: relative; 
+        overflow: hidden;
+        transition: .2s;
+    }
+    .product-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); border-color: var(--pink); }
+
+    .product-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; border-radius: 20px 20px 0 0; }
+    
+    .card-icon-box { width: 55px; height: 55px; border-radius: 15px; background: #f8f6fc; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    
+    .product-card h4 { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+    
+    .product-card .price { color: var(--purple); font-weight: 800; font-size: 20px; margin-bottom: 5px; }
+    
+    .product-card .stock { font-size: 11px; color: #999; font-weight: 600; }
+
     .cart{background:#fff;border:1px solid var(--line);border-radius:24px;display:flex;flex-direction:column;box-shadow:var(--shadow);min-height:500px}
     .cart-head{padding:20px 22px;background:linear-gradient(120deg,#302854,#6952ac);color:#fff;border-radius:24px 24px 0 0;display:flex;justify-content:space-between;align-items:center}
     .cart-items{flex:1;overflow-y:auto;padding:12px 19px}
@@ -125,7 +147,20 @@
       
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
-        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث بالاسم أو امسح الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button type="button" class="btn full" onclick="executeSale()">إتمام البيع الآن ✨</button></div></div></div>
+        <div class="pos-layout">
+            <div>
+                <div class="section-head">
+                    <h3>الألعاب المتاحة</h3>
+                    <input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث بالاسم أو امسح الباركود..." autocomplete="off">
+                </div>
+                <div class="products" id="pos-products-list"></div>
+            </div>
+            <div class="cart">
+                <div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div>
+                <div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div>
+                <div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button type="button" class="btn full" onclick="executeSale()">إتمام البيع الآن ✨</button></div>
+            </div>
+        </div>
       </section>
 
       <section id="page-inventory" class="page">
@@ -153,10 +188,7 @@
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
 <script>
-  // ⚠️⚠️ هنا حطيت رابط صورتك، لو مظهرش هتغير الرابط للي ينتهي بـ .png ⚠️⚠️
   const LOGO_URL = 'https://i.postimg.cc/XZ0Bp6X2/trend-logo.jpg'; 
-  
-  // ⚠️ اللينك بتاع التيك توك اللي الـ QR هيودي عليه ⚠️
   const WEBSITE_URL = 'https://www.tiktok.com/@trendtrendkolyoum?_r=1&_t=ZS-9BOa7zZUCQv';
 
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
@@ -321,10 +353,29 @@
     const query = (document.getElementById('pos-search').value || '').toLowerCase();
     const list = document.getElementById('pos-products-list');
     const filtered = allProducts.filter(p=>(p.name+' '+p.barcode).toLowerCase().includes(query));
-    list.innerHTML = filtered.map(p=>{
+    
+    // مجموعة ألوان للخطوط العلوية والأيقونات
+    const colors = ['#ff6f91', '#47c6d9', '#ffc857', '#7c5cff', '#38b889'];
+    const icons = ['🧸', '🚗', '🎨', '🚂', '🎲', '🦄', '🤖', '🎸'];
+
+    list.innerHTML = filtered.map((p, index)=>{
       const stock = stockByProduct[p.id] || 0;
-      return `<div class="product-card" onclick="addToCart(${p.id})"><h4>${p.name}</h4><div class="price">${p.default_sale_price} ج.م</div><div class="stock">متاح: ${stock}</div></div>`;
+      const color = colors[index % colors.length];
+      const icon = icons[index % icons.length];
+      
+      return `
+        <div class="product-card" onclick="addToCart(${p.id})" style="--accent-color: ${color}">
+            <div class="card-icon-box" style="color: ${color}">${icon}</div>
+            <h4>${p.name}</h4>
+            <div class="price">${p.default_sale_price} ج.م</div>
+            <div class="stock">متاح: ${stock} قطعة</div>
+        </div>`;
     }).join('');
+    
+    // إضافة اللون العلوي للكارت
+    const style = document.createElement('style');
+    style.innerHTML = `.product-card::before { background: var(--accent-color); }`;
+    document.head.appendChild(style);
   }
 
   function addToCart(id){
