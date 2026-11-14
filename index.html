@@ -154,11 +154,9 @@
   </div>
 <div id="receipt-window" class="receipt-window" style="display:none;"></div>
 
-<!-- ⚠️ متنسخش الجزء التاني هنا تحت على طول ⚠️ -->
-  <script>
-  // ⚠️⚠️ حط هنا الرابط المباشر للصورة (اللي بيبدأ بـ https://i.postimg.cc/) ⚠️⚠️
+<script>
+  // ⚠️⚠️ غير اللوجو ده وحط رابط صورة اللوجو بتاعك ⚠️⚠️
   const LOGO_URL = 'https://i.postimg.cc/PLACEHOLDER/logo.png'; 
-  // ⚠️ حط هنا لينك موقعك ⚠️
   const WEBSITE_URL = 'https://trend-2027.pages.dev';
 
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
@@ -167,7 +165,6 @@
   let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null;
   let currentUserRole = '';
   
-  // 1. تسجيل الدخول
   async function login(){
     const user=document.getElementById('login-user').value.trim();
     const pass=document.getElementById('login-pass').value.trim();
@@ -193,7 +190,6 @@
     else if(pass!==null) alert('كلمة المرور خطأ!');
   }
 
-  // 2. التنقل
   function switchPage(page,button){
     document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
     document.getElementById('page-'+page).classList.add('active');
@@ -207,7 +203,6 @@
 
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
-  // 3. التشغيل
   async function init(){ 
     const {data} = await db.from('warehouses').select('*').limit(1);
     if(data && data.length > 0) defaultWarehouseId = data[0].id;
@@ -227,7 +222,6 @@
     document.getElementById('storage-product-select').innerHTML = allProducts.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   }
 
-  // 4. المخزن الرئيسي
   async function addProduct(){
     const name=document.getElementById('p_name').value.trim();
     let barcode=document.getElementById('p_barcode').value.trim();
@@ -281,7 +275,6 @@
     showMessage('تم الحذف'); loadProducts();
   }
 
-  // 5. المخزن المنفصل
   async function loadStorage(){
     const {data} = await db.from('warehouses').select('id').limit(1);
     if(!data || !data.length) return;
@@ -313,7 +306,6 @@
     loadStorage();
   }
 
-  // 6. الموظفين
   async function addEmployee(){
     const name=document.getElementById('u_name').value.trim(), pass=document.getElementById('u_pass').value.trim(), role=document.getElementById('u_role').value;
     if(!name||!pass) return;
@@ -325,7 +317,6 @@
     document.getElementById('employees-table').innerHTML = (data||[]).map((u,i)=>`<tr><td>${i+1}</td><td>${u.username}</td><td>${u.role}</td><td>${u.username==='amr'?'-':`<button class="btn" onclick="db.from('users').delete().eq('id',${u.id}).then(()=>loadEmployees())">حذف</button>`}</td></tr>`).join('');
   }
 
-  // 7. البيع
   function renderPOSProducts(){
     const query = (document.getElementById('pos-search').value || '').toLowerCase();
     const list = document.getElementById('pos-products-list');
@@ -367,7 +358,6 @@
     cart = []; renderCart(); loadProducts();
   }
 
-  // 8. الطباعة
   function printLabel(p){
     document.getElementById('receipt-window').innerHTML = `
       <div class="barcode-label">
