@@ -87,43 +87,43 @@
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box input { margin-bottom: 12px; }
     
-    /* --- تصغير الفاتورة --- */
+    /* --- تصغير عرض الفاتورة --- */
     .thermal-receipt { 
-        width: 72mm; /* عرض مناسب جداً عشان ميزحفش */
+        width: 65mm; /* عرض أقل عشان تبقى مضغوطة */
         margin: 0 auto; 
-        padding: 1mm 2mm; /* مساحة داخلية صغيرة جداً */
+        padding: 1mm 2mm; 
         font-family: 'Cairo', sans-serif; 
-        font-size: 10px; /* تصغير الخط */
+        font-size: 9px; /* خط أصغر */
         color: #000; 
         background: #fff; 
         text-align: center; 
-        line-height: 1.2; /* تقليل المسافة بين السطور */
+        line-height: 1.2; 
     }
     .thermal-receipt .header h1 { 
         font-family: 'Fredoka', sans-serif; 
-        font-size: 20px; /* تصغير اسم المتجر */
+        font-size: 18px; 
         margin: 0; 
         font-weight: 800; 
     }
-    .thermal-receipt .header p { margin: 1px 0; font-size: 9px; color: #444; }
-    .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 9px; margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom: 4px; }
+    .thermal-receipt .header p { margin: 1px 0; font-size: 8px; color: #444; }
+    .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 8px; margin: 4px 0; border-bottom: 1px dashed #000; padding-bottom: 3px; }
     
-    .thermal-receipt table { width: 100%; font-size: 10px; margin-bottom: 5px; text-align: right; border-collapse: collapse; table-layout: fixed; }
-    .thermal-receipt table th { border-bottom: 1px solid #000; padding: 3px 0; background: transparent; color: #000; font-weight: bold; }
-    .thermal-receipt table td { padding: 4px 0; border-bottom: 1px dotted #ccc; word-wrap: break-word; }
+    .thermal-receipt table { width: 100%; font-size: 9px; margin-bottom: 4px; text-align: right; border-collapse: collapse; table-layout: fixed; }
+    .thermal-receipt table th { border-bottom: 1px solid #000; padding: 2px 0; background: transparent; color: #000; font-weight: bold; }
+    .thermal-receipt table td { padding: 3px 0; border-bottom: 1px dotted #ccc; word-wrap: break-word; }
     
     .thermal-receipt table th:nth-child(1), .thermal-receipt table td:nth-child(1) { width: 45%; text-align: right; }
     .thermal-receipt table th:nth-child(2), .thermal-receipt table td:nth-child(2) { width: 15%; text-align: center; }
     .thermal-receipt table th:nth-child(3), .thermal-receipt table td:nth-child(3) { width: 20%; text-align: center; }
     .thermal-receipt table th:nth-child(4), .thermal-receipt table td:nth-child(4) { width: 20%; text-align: left; }
     
-    .thermal-receipt .totals { margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px; font-size: 11px; }
+    .thermal-receipt .totals { margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; font-size: 10px; }
     .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 2px 0; }
-    .thermal-receipt .totals .grand-total { font-size: 14px; font-weight: bold; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px; }
-    .thermal-receipt .footer { margin-top: 10px; font-size: 9px; display: flex; flex-direction: column; align-items: center; }
-    .thermal-receipt .footer img.logo { width: 35px; height: auto; margin-bottom: 4px; filter: grayscale(100%); }
-    .thermal-receipt .footer .qr-container { margin-top: 4px; display:flex; justify-content:center; }
-    .thermal-receipt .footer .qr-container img { width: 45px; height: 45px; }
+    .thermal-receipt .totals .grand-total { font-size: 13px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px; }
+    .thermal-receipt .footer { margin-top: 8px; font-size: 8px; display: flex; flex-direction: column; align-items: center; }
+    .thermal-receipt .footer img.logo { width: 30px; height: auto; margin-bottom: 3px; filter: grayscale(100%); }
+    .thermal-receipt .footer .qr-container { margin-top: 3px; display:flex; justify-content:center; }
+    .thermal-receipt .footer .qr-container img { width: 35px; height: 35px; }
 
     .barcode-label { width: 50mm; height: 30mm; padding: 2mm; box-sizing: border-box; text-align: center; margin: 0 auto; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
     .barcode-label h2 { font-size: 14px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
@@ -147,12 +147,11 @@
     @media print { 
         body > * { display: none !important; } 
         #receipt-window { display: block !important; } 
-        .thermal-receipt { width: 72mm !important; margin: 0; padding: 0; }
+        .thermal-receipt { width: 65mm !important; margin: 0; padding: 0; }
         
-        /* إجبار المتصفح على الطباعة بدون هوامش */
         @page { 
             margin: 0; 
-            size: 80mm auto; 
+            size: 80mm auto; /* بنسيب مقاس الورق 80 عشان الطابعة، لكن الفاتورة نفسها 65 */
         }
     }
   </style>
@@ -781,10 +780,10 @@
     
     let itemsHtml = sale.items.map(i => `
       <tr style="border-bottom:1px dotted #ccc;">
-        <td style="text-align:right; padding:4px 0;">${i.name}</td>
-        <td style="text-align:center; padding:4px 0;">${i.qty}</td>
-        <td style="text-align:center; padding:4px 0;">${i.default_sale_price}</td>
-        <td style="text-align:left; padding:4px 0;">${i.default_sale_price * i.qty}</td>
+        <td style="text-align:right; padding:3px 0;">${i.name}</td>
+        <td style="text-align:center; padding:3px 0;">${i.qty}</td>
+        <td style="text-align:center; padding:3px 0;">${i.default_sale_price}</td>
+        <td style="text-align:left; padding:3px 0;">${i.default_sale_price * i.qty}</td>
       </tr>
     `).join('');
 
@@ -809,13 +808,13 @@
           <span>الكاشير: ${currentUserRole==='admin'?'المدير':'كاشير'}</span>
         </div>
 
-        <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+        <table style="width:100%; border-collapse:collapse; margin-top:4px;">
           <thead>
             <tr style="border-bottom:1px solid #000;">
-              <th style="text-align:right; padding:3px 0;">الصنف</th>
-              <th style="text-align:center; padding:3px 0; width:40px;">كمية</th>
-              <th style="text-align:center; padding:3px 0; width:50px;">سعر</th>
-              <th style="text-align:left; padding:3px 0; width:60px;">إجمالي</th>
+              <th style="text-align:right; padding:2px 0;">الصنف</th>
+              <th style="text-align:center; padding:2px 0; width:40px;">كمية</th>
+              <th style="text-align:center; padding:2px 0; width:50px;">سعر</th>
+              <th style="text-align:left; padding:2px 0; width:60px;">إجمالي</th>
             </tr>
           </thead>
           <tbody>
@@ -844,8 +843,8 @@
     qrDiv.innerHTML = ''; 
     new QRCode(qrDiv, {
         text: WEBSITE_URL,
-        width: 40,
-        height: 40,
+        width: 35,
+        height: 35,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
