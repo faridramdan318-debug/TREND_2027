@@ -122,11 +122,11 @@
     .thermal-receipt .footer .qr-container { margin-top: 2px; display:flex; justify-content:center; }
     .thermal-receipt .footer .qr-container img { width: 30px; height: 30px; }
 
-    /* --- تصميم الملصق (الباركود) --- */
+    /* --- تصميم الملصق (الباركود) بعد شيل السعر والترند --- */
     .barcode-label { 
         width: 50mm; 
         height: 30mm; 
-        padding: 0; /* شيلنا المسافات الداخلية */
+        padding: 0; 
         box-sizing: border-box; 
         text-align: center; 
         margin: 0 auto; 
@@ -134,26 +134,21 @@
         color: #000; 
         display: flex; 
         flex-direction: column; 
-        justify-content: space-between; 
+        justify-content: center; /* توسيط رأسي */
         align-items: center; 
-        overflow: hidden; /* عشان أي زيادة متطلعش برة */
+        overflow: hidden; 
     }
     .barcode-label .p-name { 
-        font-size: 10px; 
-        margin: 2px 0 0 0; 
+        font-size: 11px; 
+        margin: 0 0 2px 0; 
         font-weight: bold; 
         max-width: 100%; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
     }
-    .barcode-label .p-price { 
-        font-size: 12px; 
-        font-weight: bold; 
-        margin: 0 0 2px 0; 
-    }
     .barcode-label svg { 
-        width: 95%; 
+        width: 90%; 
         height: 35px; 
         display: block; 
     }
@@ -583,7 +578,7 @@
         <td>${p.default_sale_price}</td>
         <td>${stock}</td>
         <td>
-          <button class="btn secondary" style="padding:5px 8px;" onclick="printLabel({name:'${p.name}',barcode:'${p.barcode}',default_sale_price:${p.default_sale_price}})">باركود</button>
+          <button class="btn secondary" style="padding:5px 8px;" onclick="printLabel({name:'${p.name}',barcode:'${p.barcode}'})">باركود</button>
           <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button>
           <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button>
         </td>
@@ -778,7 +773,6 @@
       <div class="barcode-label">
         <p class="p-name">${p.name}</p>
         <svg id="bc"></svg>
-        <p class="p-price">${p.default_sale_price} ج.م</p>
       </div>`;
     document.getElementById('receipt-window').style.display='block';
     
