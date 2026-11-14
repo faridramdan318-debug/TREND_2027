@@ -127,7 +127,7 @@
       
       <section id="page-pos" class="page active">
         <div class="hero"><div><h3>خلّي كل عملية بيع أسهل وأسرع ✨</h3><p>اختار اللعبة، عدّل الكمية، وسيتم تحديث المخزون تلقائياً.</p></div><div class="hero-art">🎁</div></div>
-        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث بالاسم أو امسح الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button class="btn full" onclick="checkout()">إتمام البيع ✨</button></div></div></div>
+        <div class="pos-layout"><div><div class="section-head"><h3>الألعاب المتاحة</h3><input class="search" id="pos-search" oninput="renderPOSProducts()" placeholder="ابحث بالاسم أو امسح الباركود..." autocomplete="off"></div><div class="products" id="pos-products-list"></div></div><div class="cart"><div class="cart-head"><div><h3>سلة المشتريات</h3><small id="cart-count">0 ألعاب</small></div><span>🛍️</span></div><div class="cart-items" id="cart-items"><div class="empty"><div>🧸</div>السلة مستنية أول لعبة!</div></div><div class="cart-footer"><div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div><button type="button" class="btn full" onclick="executeSale()">إتمام البيع الآن ✨</button></div></div></div>
       </section>
 
       <section id="page-inventory" class="page">
@@ -346,16 +346,37 @@
     document.getElementById('cart-total').textContent = total+' ج.م';
   }
 
-  async function checkout(){
-    if(!cart.length) return;
-    let total = 0;
-    for(let item of cart){
-      total += item.default_sale_price * item.qty;
-      const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',defaultWarehouseId).eq('product_id',item.id).single();
-      if(current) await db.from('product_stock').update({quantity: current.quantity-item.qty}).eq('id',current.id);
+  // ⚠️ دالة البيع الجديدة (مبسطة جداً ومضمونة)
+  async function executeSale(){
+    if(!cart.length){
+      showMessage('السلة فارغة، ضيف منتجات الأول!', true);
+      return;
     }
-    printReceipt({id:Date.now(), total, items:cart});
-    cart = []; renderCart(); loadProducts();
+    
+    showMessage('جاري حفظ الفاتورة...');
+    
+    try {
+      let total = 0;
+      for(let item of cart){
+        total += item.default_sale_price * item.qty;
+        const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',defaultWarehouseId).eq('product_id',item.id).single();
+        if(current) {
+          await db.from('product_stock').update({quantity: current.quantity-item.qty}).eq('id',current.id);
+        }
+      }
+      
+      // استدعاء دالة الطباعة
+      printReceipt({id:Date.now(), total, items:cart});
+      
+      // تفريغ السلة بعد الطباعة
+      cart = [];
+      renderCart();
+      await loadProducts();
+      showMessage('تم البيع وتحديث المخزون بنجاح!');
+      
+    } catch(err) {
+      showMessage('حدث خطأ أثناء البيع: ' + err.message, true);
+    }
   }
 
   function printLabel(p){
