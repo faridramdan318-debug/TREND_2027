@@ -120,7 +120,7 @@
       <div class="brand"><div class="brand-mark">🧸</div><div><h1>TREND</h1><small>إدارة متجر الألعاب</small></div></div>
       <button class="nav-btn active" onclick="switchPage('pos',this)"><span>🛒</span> نقطة البيع</button>
       <button class="nav-btn" onclick="switchPage('inventory',this)"><span>📦</span> المخزن والأصناف</button>
-      <button class="nav-btn" onclick="switchPage('storage',this)"><span>🏬</span> المخزن المنفصل</button>
+      <button class="nav-btn" onclick="switchPage('storage',this)"><span>🏬</span> مخزن خاص</button>
       <button class="nav-btn" onclick="switchPage('reports',this)" id="nav-reports" style="display:none;"><span>📊</span> التقارير</button>
       <button class="nav-btn" onclick="switchPage('settings',this)" id="nav-settings" style="display:none;"><span>⚙️</span> الإعدادات</button>
       <button class="nav-btn" onclick="logout()" style="margin-top:auto; color:#fca5a5;"><span>🚪</span> تسجيل خروج</button>
@@ -151,22 +151,34 @@
         <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة للمخزن</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name"></div><div class="form-group"><label>الباركود (لو سبتيه فاضي هيتولد تلقائي)</label><input id="p_barcode"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div></div><div class="form-group"><label>الكمية *</label><input type="number" id="p_quantity" value="0"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والباركود 🎈</button></div><div class="card"><h3>📋 قائمة الألعاب</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>بيع</th><th>رصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div></div>
       </section>
 
+      <!-- شاشة المخزن الخاص -->
       <section id="page-storage" class="page">
-        <div class="hero"><div><h3>المخزن المنفصل 🏬</h3><p>خزّن بضاعتك هنا في مكان منفصل. (لا تظهر في نقطة البيع)</p></div><div class="hero-art">📦</div></div>
-        <div class="card"><h3>إضافة بضاعة للمخزن المنفصل</h3>
-          <div class="form-group"><label>اختر الصنف</label><select id="storage-product-select"></select></div>
-          <div class="form-group"><label>الكمية</label><input type="number" id="storage-qty" value="1"></div>
-          <button class="btn full" onclick="receiveStock()">إضافة الكمية للمخزن المنفصل</button>
+        <div class="hero"><div><h3>مخزن خاص 🏬</h3><p>خزّن بضاعتك هنا بشكل يدوي منفصل تماماً عن نقطة البيع.</p></div><div class="hero-art">📦</div></div>
+        <div class="grid-two">
+            <div class="card">
+                <h3>➕ إضافة صنف للمخزن الخاص</h3>
+                <div class="form-group"><label>اسم الصنف *</label><input id="s_name"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>سعر الشراء</label><input type="number" id="s_purchase" value="0"></div>
+                    <div class="form-group"><label>سعر البيع</label><input type="number" id="s_sale" value="0"></div>
+                </div>
+                <div class="form-group"><label>الكمية *</label><input type="number" id="s_qty" value="1"></div>
+                <button class="btn full" onclick="addPrivateProduct()">حفظ الصنف في المخزن الخاص</button>
+            </div>
+            <div class="card">
+                <h3>📋 محتويات المخزن الخاص</h3>
+                <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
+                    <table>
+                        <thead><tr><th>#</th><th>الاسم</th><th>شراء</th><th>بيع</th><th>الكمية</th></tr></thead>
+                        <tbody id="private-table"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="card"><h3>رصيد المخزن المنفصل</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكمية</th></tr></thead><tbody id="storage-table"></tbody></table></div></div>
       </section>
 
       <section id="page-reports" class="page">
         <div class="hero"><div><h3>التقارير 📊</h3><p>هنا تظهر تقارير الأرباح والمبيعات.</p></div><div class="hero-art">💰</div></div>
-        <div class="card" style="text-align:center; padding:50px;">
-            <h3>سيتم إضافة التقارير في التحديث القادم</h3>
-            <p style="color:var(--muted);">كل الفواتير بتتسجل في الداتا بيز بأمان.</p>
-        </div>
       </section>
 
       <section id="page-settings" class="page">
@@ -191,7 +203,7 @@
   const SUPABASE_URL='https://pvalxfezntojktvfsoqj.supabase.co';
   const SUPABASE_KEY='sb_publishable_nKy49NJsu0pfProS0o38fA_4s2LvcuV';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null, storageWarehouseId=null;
+  let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null, privateWarehouseId=null;
   let currentUserRole = '';
   let currentUserId = null; 
   
@@ -229,10 +241,11 @@
     document.getElementById('page-'+page).classList.add('active');
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
     button.classList.add('active');
-    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخزن المنفصل':page==='reports'?'التقارير':'الإعدادات';
+    
+    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'مخزن خاص':page==='reports'?'التقارير':'الإعدادات';
     
     if(page==='pos') loadProducts();
-    if(page==='storage') loadStorage();
+    if(page==='storage') loadPrivateWarehouse();
     if(page==='settings') {
         loadEmployees();
         document.getElementById('barcode_width').value = bcWidth;
@@ -243,11 +256,13 @@
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
   async function init(){ 
+    // 1. المخزن الأساسي
     const {data:wh} = await db.from('warehouses').select('*').eq('code', 'MAIN-01').single();
     if(wh) defaultWarehouseId = wh.id;
 
-    const {data:storageWh} = await db.from('warehouses').select('*').eq('code', 'STORAGE-01').single();
-    if(storageWh) storageWarehouseId = storageWh.id;
+    // 2. المخزن الخاص
+    const {data:privWh} = await db.from('warehouses').select('*').eq('code', 'PRIVATE-01').single();
+    if(privWh) privateWarehouseId = privWh.id;
 
     await loadProducts(); 
   }
@@ -262,7 +277,6 @@
     }
     renderInventoryTable();
     renderPOSProducts();
-    document.getElementById('storage-product-select').innerHTML = allProducts.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   }
 
   async function addProduct(){
@@ -281,6 +295,61 @@
     loadProducts();
     printLabel(p);
   }
+
+  // --- دوال المخزن الخاص ---
+  async function addPrivateProduct(){
+    const name = document.getElementById('s_name').value.trim();
+    const purchase = parseFloat(document.getElementById('s_purchase').value)||0;
+    const sale = parseFloat(document.getElementById('s_sale').value)||0;
+    const qty = parseInt(document.getElementById('s_qty').value)||1;
+
+    if(!name) return showMessage('اكتب اسم الصنف', true);
+    if(!privateWarehouseId) return showMessage('خطأ في إعداد المخزن الخاص', true);
+
+    const {data:p, error} = await db.from('products').insert([{
+        name, 
+        barcode: 'PRV-' + Date.now(), 
+        default_purchase_price: purchase, 
+        default_sale_price: sale
+    }]).select().single();
+
+    if(error) return showMessage('خطأ: '+error.message, true);
+
+    await db.from('product_stock').insert([{
+        product_id: p.id, 
+        warehouse_id: privateWarehouseId, 
+        quantity: qty
+    }]);
+
+    showMessage('تم الإضافة للمخزن الخاص بنجاح!');
+    document.getElementById('s_name').value = '';
+    document.getElementById('s_purchase').value = '0';
+    document.getElementById('s_sale').value = '0';
+    document.getElementById('s_qty').value = '1';
+    loadPrivateWarehouse();
+  }
+
+  async function loadPrivateWarehouse(){
+    if(!privateWarehouseId) return;
+    const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', privateWarehouseId);
+    
+    // محتاجين نجيب بيانات المنتجات لجدول المخزن الخاص
+    const {data:prods} = await db.from('products').select('*');
+    const allP = prods || [];
+
+    const tbody = document.getElementById('private-table');
+    tbody.innerHTML = (stock||[]).map((s,i)=>{
+      const p = allP.find(x=>x.id===s.product_id);
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${p?p.name:'-'}</td>
+        <td>${p?p.default_purchase_price:'0'}</td>
+        <td>${p?p.default_sale_price:'0'}</td>
+        <td>${s.quantity}</td>
+      </tr>`;
+    }).join('');
+  }
+  // -------------------------
 
   function renderInventoryTable(){
     const body=document.getElementById('inventory-table');
@@ -316,33 +385,6 @@
     await db.from('product_stock').delete().eq('product_id',id);
     await db.from('products').delete().eq('id',id);
     showMessage('تم الحذف'); loadProducts();
-  }
-
-  async function loadStorage(){
-    if(!storageWarehouseId) return;
-    
-    const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', storageWarehouseId);
-    const tbody = document.getElementById('storage-table');
-    tbody.innerHTML = (stock||[]).map((s,i)=>{
-      const p = allProducts.find(x=>x.id===s.product_id);
-      return `<tr><td>${i+1}</td><td>${p?p.name:'-'}</td><td>${s.quantity}</td></tr>`;
-    }).join('');
-  }
-
-  async function receiveStock(){
-    const pid = document.getElementById('storage-product-select').value;
-    const qty = parseInt(document.getElementById('storage-qty').value);
-    if(!pid) return;
-    if(!storageWarehouseId) return showMessage('خطأ في المخزن المنفصل', true);
-    
-    const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',storageWarehouseId).eq('product_id',pid).maybeSingle();
-    if(current) {
-      await db.from('product_stock').update({quantity: current.quantity+qty}).eq('id',current.id);
-    } else {
-      await db.from('product_stock').insert([{warehouse_id:storageWarehouseId, product_id:pid, quantity:qty}]);
-    }
-    showMessage('تمت الإضافة للمخزن المنفصل');
-    loadStorage();
   }
 
   async function addEmployee(){
@@ -420,7 +462,6 @@
     
     try {
       let total = 0;
-      // 1. حساب الإجمالي وتحديث المخزون
       for(let item of cart){
         total += item.default_sale_price * item.qty;
         const {data:current} = await db.from('product_stock').select('*').eq('warehouse_id',defaultWarehouseId).eq('product_id',item.id).single();
@@ -429,7 +470,6 @@
         }
       }
 
-      // 2. حفظ الفاتورة في جدول المبيعات
       const invoiceNo = 'INV-' + Date.now();
       const {data: saleData, error: saleError} = await db.from('sales').insert([{
           invoice_no: invoiceNo,
@@ -439,7 +479,6 @@
 
       if(saleError) throw saleError;
 
-      // 3. حفظ تفاصيل الفاتورة في جدول المبيعات
       const itemsToInsert = cart.map(item => ({
           sale_id: saleData.id,
           product_id: item.id,
@@ -452,7 +491,6 @@
       const {error: itemsError} = await db.from('sales_items').insert(itemsToInsert);
       if(itemsError) throw itemsError;
       
-      // 4. طباعة الفاتورة
       printReceipt({id:saleData.id, invoice_no: invoiceNo, total, items:cart});
       
       cart = [];
