@@ -96,13 +96,13 @@
     .thermal-receipt .footer svg#invoice-bc { margin: 5px auto; display: block; height: 40px !important; width: 80% !important; }
     .thermal-receipt .footer .qr-container { margin-top: 5px; display:flex; justify-content:center; }
 
-    .barcode-label { width: 50mm; height: 25mm; padding: 1mm 2mm; box-sizing: border-box; text-align: center; margin: 0; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; overflow: hidden; }
+    .barcode-label { width: 50mm; height: 25mm; padding: 1mm 1mm; box-sizing: border-box; text-align: center; margin: 0; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; overflow: hidden; }
     @page { size: 50mm 25mm; margin: 0; }
     @media print { html, body { width: 50mm !important; height: 25mm !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } #receipt-window, .barcode-label { width: 50mm !important; height: 25mm !important; margin: 0 !important; padding: 0 !important; } }
     .barcode-label h2 { font-size: 11px; line-height: 12px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
     .barcode-label .p-name { font-size: 8px; line-height: 9px; margin: 0; font-weight: bold; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .barcode-label .p-price { font-size: 10px; line-height: 11px; font-weight: bold; margin: 1px 0; }
-    .barcode-label svg { width: 70%; height: 10px; display: block; }
+    .barcode-label svg { width: 96%; height: 10px; display: block; }
     .barcode-label .bc-number { font-size: 4px; line-height: 5px; letter-spacing: .25px; }
     #receipt-window { width: 50mm; height: 25mm; margin: 0; padding: 0; }
 
@@ -370,7 +370,7 @@
         
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
-            <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="85" min="30" max="90"></div>
+            <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="96" min="50" max="98"></div>
             <div class="form-row"><div class="form-group"><label>سُمك خطوط الباركود</label><input type="number" id="barcode_width" value="0.5" step="0.1" min="0.2" max="1.5"></div><div class="form-group"><label>طول خطوط الباركود (px)</label><input type="number" id="barcode_height" value="10" min="5" max="18"></div></div>
             <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button>
         </div>
@@ -390,9 +390,9 @@
   let currentUserRole = '';
   let currentUserId = null; 
   
-  let bcScale = parseFloat(localStorage.getItem('bc_scale_v3') || '85');
-  let bcWidth = parseFloat(localStorage.getItem('bc_width_v3') || '0.5');
-  let bcHeight = parseFloat(localStorage.getItem('bc_height_v3') || '10');
+  let bcScale = parseFloat(localStorage.getItem('bc_scale_v4') || '96');
+  let bcWidth = parseFloat(localStorage.getItem('bc_width_v4') || '0.5');
+  let bcHeight = parseFloat(localStorage.getItem('bc_height_v4') || '10');
   
   async function login(){
     const user=document.getElementById('login-user').value.trim();
@@ -856,63 +856,44 @@
     const body=document.getElementById('inventory-table');
     body.innerHTML = allProducts.map((p,i)=>{
       const stock = stockByProduct[p.id] || 0;
-      return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabel({name:'${p.name}',barcode:'${p.barcode}',default_sale_price:${p.default_sale_price}})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button></td></tr>`;
+      return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabelById(${p.id})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button></td></tr>`;
     }).join('');
   }
 
+  function printLabelById(id){
+    const p=allProducts.find(x=>x.id===id);
+    if(p) printLabel(p);
+  }
+
   async function editProduct(id){
-    const p = allProducts.find(x=>x.id===id);
+    const p=allProducts.find(x=>x.id===id);
     if(!p) return showMessage('الصنف غير موجود', true);
-
-    const oldStock = Number(stockByProduct[id] || 0);
-    const newName = prompt('اسم اللعبة:', p.name);
-    if(newName === null) return;
-    const cleanName = newName.trim();
-    if(!cleanName) return showMessage('اسم الصنف لا يمكن أن يكون فارغاً', true);
-
-    const newPurchase = prompt('سعر الشراء:', p.default_purchase_price);
-    if(newPurchase === null) return;
-    const purchase = Number(newPurchase);
-    if(!Number.isFinite(purchase) || purchase < 0) return showMessage('سعر الشراء غير صحيح', true);
-
-    const newSale = prompt('سعر البيع:', p.default_sale_price);
-    if(newSale === null) return;
-    const sale = Number(newSale);
-    if(!Number.isFinite(sale) || sale < 0) return showMessage('سعر البيع غير صحيح', true);
-
-    const newQty = prompt('الكمية الحالية في المخزن الرئيسي:', oldStock);
-    if(newQty === null) return;
-    const quantity = Number(newQty);
-    if(!Number.isInteger(quantity) || quantity < 0) return showMessage('الكمية يجب أن تكون رقماً صحيحاً غير سالب', true);
     if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط', true);
 
+    const nameInput=prompt('اسم الصنف:',p.name); if(nameInput===null) return;
+    const name=nameInput.trim(); if(!name) return showMessage('اسم الصنف لا يمكن أن يكون فارغاً',true);
+    const purchaseInput=prompt('سعر الشراء:',p.default_purchase_price); if(purchaseInput===null) return;
+    const purchase=Number(purchaseInput); if(!Number.isFinite(purchase)||purchase<0) return showMessage('سعر الشراء غير صحيح',true);
+    const saleInput=prompt('سعر البيع:',p.default_sale_price); if(saleInput===null) return;
+    const sale=Number(saleInput); if(!Number.isFinite(sale)||sale<0) return showMessage('سعر البيع غير صحيح',true);
+    const qtyInput=prompt('الكمية في المخزن الرئيسي:',Number(stockByProduct[id]||0)); if(qtyInput===null) return;
+    const quantity=Number(qtyInput); if(!Number.isInteger(quantity)||quantity<0) return showMessage('الكمية يجب أن تكون رقماً صحيحاً غير سالب',true);
+
     try{
-      const {error:productError} = await db.from('products').update({
-        name: cleanName,
-        default_purchase_price: purchase,
-        default_sale_price: sale
-      }).eq('id', id);
-      if(productError) throw productError;
-
-      const {data:stockRow,error:stockReadError} = await db.from('product_stock')
-        .select('id').eq('product_id', id).eq('warehouse_id', defaultWarehouseId).maybeSingle();
-      if(stockReadError) throw stockReadError;
-
-      let stockError;
-      if(stockRow){
-        const result = await db.from('product_stock').update({quantity}).eq('id', stockRow.id);
-        stockError = result.error;
+      const productResult=await db.from('products').update({name,default_purchase_price:purchase,default_sale_price:sale}).eq('id',id).select('id').single();
+      if(productResult.error) throw productResult.error;
+      const stockResult=await db.from('product_stock').select('id').eq('product_id',id).eq('warehouse_id',defaultWarehouseId).maybeSingle();
+      if(stockResult.error) throw stockResult.error;
+      if(stockResult.data){
+        const r=await db.from('product_stock').update({quantity}).eq('id',stockResult.data.id).select('id').single();
+        if(r.error) throw r.error;
       }else{
-        const result = await db.from('product_stock').insert([{product_id:id,warehouse_id:defaultWarehouseId,quantity}]);
-        stockError = result.error;
+        const r=await db.from('product_stock').insert([{product_id:id,warehouse_id:defaultWarehouseId,quantity}]).select('id').single();
+        if(r.error) throw r.error;
       }
-      if(stockError) throw stockError;
-
-      showMessage('تم تعديل الاسم والأسعار والكمية بنجاح');
+      showMessage('تم تعديل الاسم وسعر الشراء وسعر البيع والكمية');
       await loadProducts();
-    }catch(err){
-      showMessage('خطأ أثناء تعديل الصنف: '+err.message, true);
-    }
+    }catch(err){ showMessage('لم يتم التعديل: '+(err.message||err),true); }
   }
 
   async function deleteProduct(id){
@@ -934,12 +915,12 @@
   }
 
   function saveBarcodeSettings() {
-      bcScale = Math.max(30, Math.min(90, parseFloat(document.getElementById('barcode_scale').value) || 85));
+      bcScale = Math.max(30, Math.min(90, parseFloat(document.getElementById('barcode_scale').value) || 96));
       bcWidth = Math.max(0.2, Math.min(1.5, parseFloat(document.getElementById('barcode_width').value) || 0.5));
       bcHeight = Math.max(5, Math.min(18, parseFloat(document.getElementById('barcode_height').value) || 10));
-      localStorage.setItem('bc_scale_v3', bcScale);
-      localStorage.setItem('bc_width_v3', bcWidth);
-      localStorage.setItem('bc_height_v3', bcHeight);
+      localStorage.setItem('bc_scale_v4', bcScale);
+      localStorage.setItem('bc_width_v4', bcWidth);
+      localStorage.setItem('bc_height_v4', bcHeight);
       showMessage('تم حفظ إعدادات الطباعة بنجاح!');
   }
 
@@ -969,15 +950,28 @@
     renderCart();
   }
 
+  function changeCartQty(id,delta){
+    const item=cart.find(x=>x.id===id); if(!item) return;
+    const available=Number(stockByProduct[id]||0);
+    const next=item.qty+delta;
+    if(next<=0){ cart=cart.filter(x=>x.id!==id); }
+    else if(next>available) return showMessage('لا توجد كمية إضافية من هذا الصنف',true);
+    else item.qty=next;
+    renderCart();
+  }
+
+  function removeFromCart(id){ cart=cart.filter(x=>x.id!==id); renderCart(); }
+
   function renderCart(){
-    const box = document.getElementById('cart-items');
-    if(!cart.length) { box.innerHTML='<div class="empty">السلة فارغة</div>'; document.getElementById('cart-total').textContent='0'; return; }
-    let total = 0;
-    box.innerHTML = cart.map((item,i)=>{
-      total += item.default_sale_price * item.qty;
-      return `<div class="cart-item"><span>${item.name} (${item.qty})</span><span>${item.default_sale_price * item.qty} ج.م</span></div>`;
+    const box=document.getElementById('cart-items');
+    if(!cart.length){ box.innerHTML='<div class="empty">السلة فارغة</div>'; document.getElementById('cart-total').textContent='0.00 ج.م'; document.getElementById('cart-count').textContent='0 ألعاب'; return; }
+    let total=0, count=0;
+    box.innerHTML=cart.map(item=>{
+      const line=Number(item.default_sale_price)*Number(item.qty); total+=line; count+=Number(item.qty);
+      return `<div class="cart-item"><div style="flex:1"><b>${escapeHtml(item.name)}</b><div style="color:var(--muted);font-size:12px">${Number(item.default_sale_price).toFixed(2)} ج.م × ${item.qty}</div></div><div style="display:flex;align-items:center;gap:5px"><button type="button" class="controls button" onclick="changeCartQty(${item.id},-1)">−</button><b>${item.qty}</b><button type="button" class="controls button" onclick="changeCartQty(${item.id},1)">+</button><button type="button" onclick="removeFromCart(${item.id})" style="border:0;background:none;color:var(--red);font-size:18px;cursor:pointer" title="حذف">✖</button></div></div>`;
     }).join('');
-    document.getElementById('cart-total').textContent = total+' ج.م';
+    document.getElementById('cart-total').textContent=total.toFixed(2)+' ج.م';
+    document.getElementById('cart-count').textContent=count+' ألعاب';
   }
 
   async function executeSale(){
@@ -1042,7 +1036,7 @@
         textMargin: 2
     });
     const barcodeSvg = document.getElementById('bc');
-    barcodeSvg.style.width = Math.max(30, Math.min(90, bcScale)) + '%';
+    barcodeSvg.style.width = Math.max(50, Math.min(98, bcScale)) + '%';
     barcodeSvg.style.height = bcHeight + 'px';
     barcodeSvg.style.display = 'block';
     barcodeSvg.style.margin = '0 auto';
