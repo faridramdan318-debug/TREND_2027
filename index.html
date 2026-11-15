@@ -817,9 +817,19 @@
     const {data:p, error} = await db.from('products').insert([{name, barcode, default_purchase_price:document.getElementById('p_purchase').value, default_sale_price:document.getElementById('p_sale').value}]).select().single();
     if(error) return showMessage('خطأ: '+error.message, true);
     
-    await db.from('product_stock').insert([{product_id:p.id, warehouse_id:defaultWarehouseId, quantity:qty}]);
+    const {error:stockError} = await db.from('product_stock').insert([{product_id:p.id, warehouse_id:defaultWarehouseId, quantity:qty}]);
+    if(stockError){
+      // لا نترك المنتج بدون رصيد في حالة فشل حفظ المخزون.
+      await db.from('products').delete().eq('id', p.id);
+      return showMessage('خطأ في حفظ كمية المخزون: '+stockError.message, true);
+    }
     showMessage('تم الحفظ بنجاح!');
-    loadProducts();
+    document.getElementById('p_name').value='';
+    document.getElementById('p_barcode').value='';
+    document.getElementById('p_purchase').value='0';
+    document.getElementById('p_sale').value='0';
+    document.getElementById('p_quantity').value='0';
+    await loadProducts();
     printLabel(p);
   }
 
