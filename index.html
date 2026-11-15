@@ -849,12 +849,57 @@
 
   async function editProduct(id){
     const p = allProducts.find(x=>x.id===id);
+    if(!p) return showMessage('الصنف غير موجود', true);
+
+    const oldStock = Number(stockByProduct[id] || 0);
     const newName = prompt('اسم اللعبة:', p.name);
-    if(!newName) return;
+    if(newName === null) return;
+    const cleanName = newName.trim();
+    if(!cleanName) return showMessage('اسم الصنف لا يمكن أن يكون فارغاً', true);
+
+    const newPurchase = prompt('سعر الشراء:', p.default_purchase_price);
+    if(newPurchase === null) return;
+    const purchase = Number(newPurchase);
+    if(!Number.isFinite(purchase) || purchase < 0) return showMessage('سعر الشراء غير صحيح', true);
+
     const newSale = prompt('سعر البيع:', p.default_sale_price);
-    if(!newSale) return;
-    await db.from('products').update({name:newName, default_sale_price:Number(newSale)}).eq('id',id);
-    showMessage('تم التعديل'); loadProducts();
+    if(newSale === null) return;
+    const sale = Number(newSale);
+    if(!Number.isFinite(sale) || sale < 0) return showMessage('سعر البيع غير صحيح', true);
+
+    const newQty = prompt('الكمية الحالية في المخزن الرئيسي:', oldStock);
+    if(newQty === null) return;
+    const quantity = Number(newQty);
+    if(!Number.isInteger(quantity) || quantity < 0) return showMessage('الكمية يجب أن تكون رقماً صحيحاً غير سالب', true);
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط', true);
+
+    try{
+      const {error:productError} = await db.from('products').update({
+        name: cleanName,
+        default_purchase_price: purchase,
+        default_sale_price: sale
+      }).eq('id', id);
+      if(productError) throw productError;
+
+      const {data:stockRow,error:stockReadError} = await db.from('product_stock')
+        .select('id').eq('product_id', id).eq('warehouse_id', defaultWarehouseId).maybeSingle();
+      if(stockReadError) throw stockReadError;
+
+      let stockError;
+      if(stockRow){
+        const result = await db.from('product_stock').update({quantity}).eq('id', stockRow.id);
+        stockError = result.error;
+      }else{
+        const result = await db.from('product_stock').insert([{product_id:id,warehouse_id:defaultWarehouseId,quantity}]);
+        stockError = result.error;
+      }
+      if(stockError) throw stockError;
+
+      showMessage('تم تعديل الاسم والأسعار والكمية بنجاح');
+      await loadProducts();
+    }catch(err){
+      showMessage('خطأ أثناء تعديل الصنف: '+err.message, true);
+    }
   }
 
   async function deleteProduct(id){
