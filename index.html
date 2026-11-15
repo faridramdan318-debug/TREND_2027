@@ -370,8 +370,8 @@
         
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
-            <div class="form-group"><label>عرض الباركود (كل ما يزيد يعرض أكتر)</label><input type="number" id="barcode_width" value="1.2" step="0.1"></div>
-            <div class="form-group"><label>طول الباركود</label><input type="number" id="barcode_height" value="35"></div>
+            <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="55" min="30" max="90"></div>
+            <div class="form-row"><div class="form-group"><label>سُمك خطوط الباركود</label><input type="number" id="barcode_width" value="0.4" step="0.1" min="0.2" max="1.5"></div><div class="form-group"><label>طول خطوط الباركود (px)</label><input type="number" id="barcode_height" value="8" min="5" max="18"></div></div>
             <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button>
         </div>
       </section>
@@ -390,8 +390,9 @@
   let currentUserRole = '';
   let currentUserId = null; 
   
-  let bcWidth = parseFloat(localStorage.getItem('bc_width') || '1.2');
-  let bcHeight = parseFloat(localStorage.getItem('bc_height') || '35');
+  let bcScale = parseFloat(localStorage.getItem('bc_scale_v2') || '55');
+  let bcWidth = parseFloat(localStorage.getItem('bc_width_v2') || '0.4');
+  let bcHeight = parseFloat(localStorage.getItem('bc_height_v2') || '8');
   
   async function login(){
     const user=document.getElementById('login-user').value.trim();
@@ -439,6 +440,7 @@
     if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
+        document.getElementById('barcode_scale').value = bcScale;
         document.getElementById('barcode_width').value = bcWidth;
         document.getElementById('barcode_height').value = bcHeight;
     }
@@ -932,10 +934,12 @@
   }
 
   function saveBarcodeSettings() {
-      bcWidth = parseFloat(document.getElementById('barcode_width').value);
-      bcHeight = parseFloat(document.getElementById('barcode_height').value);
-      localStorage.setItem('bc_width', bcWidth);
-      localStorage.setItem('bc_height', bcHeight);
+      bcScale = Math.max(30, Math.min(90, parseFloat(document.getElementById('barcode_scale').value) || 55));
+      bcWidth = Math.max(0.2, Math.min(1.5, parseFloat(document.getElementById('barcode_width').value) || 0.4));
+      bcHeight = Math.max(5, Math.min(18, parseFloat(document.getElementById('barcode_height').value) || 8));
+      localStorage.setItem('bc_scale_v2', bcScale);
+      localStorage.setItem('bc_width_v2', bcWidth);
+      localStorage.setItem('bc_height_v2', bcHeight);
       showMessage('تم حفظ إعدادات الطباعة بنجاح!');
   }
 
@@ -1030,13 +1034,18 @@
     document.getElementById('receipt-window').style.display='block';
     JsBarcode("#bc", p.barcode, {
         format: "CODE128",
-        width: Math.min((Number(bcWidth) || 1) * 0.38, 0.5),
-        height: 10,
+        width: bcWidth,
+        height: bcHeight,
         displayValue: false,
         fontSize: 4,
         margin: 0,
         textMargin: 2
     });
+    const barcodeSvg = document.getElementById('bc');
+    barcodeSvg.style.width = Math.max(30, Math.min(90, bcScale)) + '%';
+    barcodeSvg.style.height = bcHeight + 'px';
+    barcodeSvg.style.display = 'block';
+    barcodeSvg.style.margin = '0 auto';
     setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 500);
   }
 
