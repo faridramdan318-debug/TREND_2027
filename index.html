@@ -138,6 +138,7 @@
       <button class="nav-btn" onclick="switchPage('inventory',this)"><span>📦</span> المخزن والأصناف</button>
       <button class="nav-btn" onclick="switchPage('storage',this)"><span>🏬</span> المخزن المنفصل</button>
       <button class="nav-btn" onclick="switchPage('suppliers',this)"><span>🚚</span> الموردين والمشتريات</button>
+      <button class="nav-btn" onclick="switchPage('customers',this)"><span>👥</span> العملاء والحسابات</button>
       <button class="nav-btn" onclick="switchPage('expenses',this)"><span>💸</span> المصروفات</button>
       <button class="nav-btn" onclick="switchPage('reports',this)" id="nav-reports" style="display:none;"><span>📊</span> التقارير</button>
       <button class="nav-btn" onclick="switchPage('settings',this)" id="nav-settings" style="display:none;"><span>⚙️</span> الإعدادات</button>
@@ -248,6 +249,48 @@
                 </table>
             </div>
         </div>
+      </section>
+
+      <section id="page-customers" class="page">
+        <div class="hero"><div><h3>العملاء والحسابات الآجلة 👥</h3><p>أضف العميل، اعمل له فاتورة، وسجل كل دفعة مع الرصيد المتبقي.</p></div><div class="hero-art">🧾</div></div>
+        <div class="grid-two">
+          <div class="card">
+            <h3>➕ إضافة عميل</h3>
+            <div class="form-group"><label>اسم العميل *</label><input id="c_name"></div>
+            <div class="form-group"><label>رقم الهاتف</label><input id="c_phone"></div>
+            <div class="form-group"><label>العنوان / ملاحظات</label><input id="c_notes"></div>
+            <button class="btn full" onclick="addCustomer()">حفظ العميل</button>
+          </div>
+          <div class="card">
+            <h3>🧾 فاتورة عميل</h3>
+            <div class="form-group"><label>العميل *</label><select id="credit-customer"></select></div>
+            <div id="customer-sale-items"></div>
+            <button class="btn secondary full" onclick="addCustomerSaleRow()" style="margin-bottom:10px">+ إضافة صنف</button>
+            <div class="form-row">
+              <div class="form-group"><label>نوع الفاتورة</label><select id="customer-sale-type" onchange="toggleCustomerPayment()"><option value="credit">آجل</option><option value="cash">كاش</option></select></div>
+              <div class="form-group"><label>المدفوع الآن</label><input type="number" id="customer-initial-paid" value="0" min="0" step="0.01"></div>
+            </div>
+            <div class="form-group"><label>طريقة دفع المدفوع</label><select id="customer-initial-method"><option value="cash">كاش</option><option value="instapay">إنستا باي</option><option value="wallet">محفظة</option></select></div>
+            <div class="total"><span>إجمالي الفاتورة</span><strong id="customer-sale-total">0.00 ج.م</strong></div>
+            <button class="btn full" onclick="saveCustomerSale()">حفظ الفاتورة وخصم المخزون</button>
+          </div>
+        </div>
+        <div class="grid-two">
+          <div class="card">
+            <h3>💰 تسجيل دفعة من عميل</h3>
+            <div class="form-group"><label>العميل</label><select id="payment-customer" onchange="loadCustomerLedger()"></select></div>
+            <div class="form-group"><label>المبلغ *</label><input type="number" id="customer-payment-amount" min="0.01" step="0.01"></div>
+            <div class="form-group"><label>طريقة الدفع</label><select id="customer-payment-method"><option value="cash">كاش</option><option value="instapay">إنستا باي</option><option value="wallet">محفظة</option></select></div>
+            <div class="form-group"><label>ملاحظات</label><input id="customer-payment-notes"></div>
+            <button class="btn full" onclick="addCustomerPayment()">حفظ الدفعة</button>
+            <p id="customer-current-balance" style="margin-top:12px;font-weight:800;color:var(--purple)">الرصيد: 0.00 ج.م</p>
+          </div>
+          <div class="card">
+            <h3>📋 سجل العملاء</h3>
+            <div class="table-wrap" style="max-height:330px;overflow-y:auto"><table><thead><tr><th>العميل</th><th>الهاتف</th><th>إجمالي الآجل</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody id="customers-table"></tbody></table></div>
+          </div>
+        </div>
+        <div class="card"><h3>📒 حركة العميل المحدد</h3><div class="table-wrap" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th></tr></thead><tbody id="customer-ledger-table"></tbody></table></div></div>
       </section>
 
       <section id="page-expenses" class="page">
@@ -386,11 +429,12 @@
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
     button.classList.add('active');
     
-    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخزن المنفصل':page==='suppliers'?'الموردين والمشتريات':page==='expenses'?'المصروفات':page==='reports'?'التقارير':'الإعدادات';
+    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخزن المنفصل':page==='suppliers'?'الموردين والمشتريات':page==='customers'?'العملاء والحسابات':page==='expenses'?'المصروفات':page==='reports'?'التقارير':'الإعدادات';
     
     if(page==='pos') loadProducts();
     if(page==='storage') loadPrivateWarehouse();
     if(page==='suppliers') loadSuppliersPage();
+    if(page==='customers') loadCustomersPage();
     if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
@@ -585,6 +629,116 @@
     }).join('');
   }
 
+  // --- العملاء والحسابات الآجلة ---
+  let customersCache=[];
+  let customerSaleRows=[];
+
+  async function loadCustomersPage(){
+    const {data,error}=await db.from('customers').select('*').order('id',{ascending:false});
+    if(error) return showMessage('تعذر تحميل العملاء: '+error.message,true);
+    customersCache=data||[];
+    const options=customersCache.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}${c.phone?' - '+escapeHtml(c.phone):''}</option>`).join('');
+    document.getElementById('credit-customer').innerHTML=options;
+    document.getElementById('payment-customer').innerHTML=options;
+    await renderCustomersTable();
+    if(!document.querySelectorAll('.customer-sale-row').length) addCustomerSaleRow();
+    await loadCustomerLedger();
+  }
+
+  async function addCustomer(){
+    const name=document.getElementById('c_name').value.trim();
+    if(!name) return showMessage('اكتب اسم العميل',true);
+    const {error}=await db.from('customers').insert([{name,phone:document.getElementById('c_phone').value.trim(),notes:document.getElementById('c_notes').value.trim()}]);
+    if(error) return showMessage('خطأ: '+error.message,true);
+    document.getElementById('c_name').value=''; document.getElementById('c_phone').value=''; document.getElementById('c_notes').value='';
+    showMessage('تم إضافة العميل'); await loadCustomersPage();
+  }
+
+  function addCustomerSaleRow(){
+    const container=document.getElementById('customer-sale-items');
+    const row=document.createElement('div'); row.className='customer-sale-row'; row.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 35px;gap:6px;margin-bottom:7px;align-items:center';
+    row.innerHTML=`<select class="cs-product" onchange="customerProductChanged(this)">${allProducts.filter(p=>(stockByProduct[p.id]||0)>0).map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (متاح ${stockByProduct[p.id]||0})</option>`).join('')}</select><input class="cs-qty" type="number" min="1" value="1" oninput="updateCustomerSaleTotal()"><input class="cs-price" type="number" min="0" step="0.01" value="0" oninput="updateCustomerSaleTotal()"><button type="button" onclick="this.parentElement.remove();updateCustomerSaleTotal()" style="border:0;background:none;color:red">✖</button>`;
+    container.appendChild(row);
+    const product=allProducts.find(p=>String(p.id)===row.querySelector('.cs-product').value); if(product) row.querySelector('.cs-price').value=product.default_sale_price;
+    updateCustomerSaleTotal();
+  }
+
+  function customerProductChanged(select){
+    const row=select.closest('.customer-sale-row');
+    const product=allProducts.find(p=>String(p.id)===select.value);
+    if(product) row.querySelector('.cs-price').value=product.default_sale_price;
+    updateCustomerSaleTotal();
+  }
+
+  function updateCustomerSaleTotal(){
+    let total=0;
+    document.querySelectorAll('.customer-sale-row').forEach(row=>{ total += (Number(row.querySelector('.cs-qty').value)||0)*(Number(row.querySelector('.cs-price').value)||0); });
+    document.getElementById('customer-sale-total').textContent=total.toFixed(2)+' ج.م';
+    const type=document.getElementById('customer-sale-type')?.value;
+    if(type==='cash') document.getElementById('customer-initial-paid').value=total.toFixed(2);
+  }
+  function toggleCustomerPayment(){ updateCustomerSaleTotal(); }
+
+  async function saveCustomerSale(){
+    const customerId=document.getElementById('credit-customer').value;
+    const type=document.getElementById('customer-sale-type').value;
+    const rows=[...document.querySelectorAll('.customer-sale-row')];
+    if(!customerId) return showMessage('أضف واختر العميل أولاً',true);
+    if(!rows.length) return showMessage('أضف صنفاً واحداً على الأقل',true);
+    const items=[]; let total=0;
+    for(const row of rows){
+      const product=allProducts.find(p=>String(p.id)===row.querySelector('.cs-product').value);
+      const qty=Number(row.querySelector('.cs-qty').value)||0, price=Number(row.querySelector('.cs-price').value)||0;
+      if(!product || qty<=0) return showMessage('راجع الأصناف والكميات',true);
+      if(qty > Number(stockByProduct[product.id]||0)) return showMessage('المخزون غير كافٍ للصنف: '+product.name,true);
+      items.push({product,qty,price}); total += qty*price;
+    }
+    let paid=Number(document.getElementById('customer-initial-paid').value)||0;
+    if(type==='cash') paid=total;
+    if(paid<0 || paid>total) return showMessage('المدفوع يجب أن يكون بين صفر وإجمالي الفاتورة',true);
+    const status=paid>=total?'paid':paid>0?'partial':'due';
+    try{
+      const invoiceNo='CUS-'+Date.now();
+      const {data:sale,error:saleError}=await db.from('sales').insert([{invoice_no:invoiceNo,total,user_id:currentUserId,customer_id:customerId,payment_method:type,paid_amount:paid,payment_status:status}]).select().single();
+      if(saleError) throw saleError;
+      const {error:itemError}=await db.from('sales_items').insert(items.map(x=>({sale_id:sale.id,product_id:x.product.id,product_name:x.product.name,quantity:x.qty,price:x.price,total:x.qty*x.price})));
+      if(itemError) throw itemError;
+      for(const x of items){ const {data:st,error}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',x.product.id).single(); if(error||!st||Number(st.quantity)<x.qty) throw new Error('تعذر تحديث مخزون '+x.product.name); const r=await db.from('product_stock').update({quantity:Number(st.quantity)-x.qty}).eq('id',st.id); if(r.error) throw r.error; }
+      if(paid>0){ const r=await db.from('customer_payments').insert([{customer_id:customerId,sale_id:sale.id,amount:paid,payment_method:document.getElementById('customer-initial-method').value,notes:'دفعة عند إنشاء الفاتورة'}]); if(r.error) throw r.error; }
+      printReceipt({id:sale.id,invoice_no:invoiceNo,total,items:items.map(x=>({...x.product,qty:x.qty,default_sale_price:x.price})),payment_method:type});
+      showMessage(`تم حفظ الفاتورة ${invoiceNo} والرصيد المتبقي ${(total-paid).toFixed(2)} ج.م`);
+      document.getElementById('customer-sale-items').innerHTML=''; customerSaleRows=[]; document.getElementById('customer-initial-paid').value='0'; addCustomerSaleRow(); await loadProducts(); await loadCustomersPage();
+    }catch(err){ showMessage('خطأ في حفظ الفاتورة: '+err.message,true); }
+  }
+
+  async function renderCustomersTable(){
+    const body=document.getElementById('customers-table'); if(!customersCache.length){body.innerHTML='<tr><td colspan="5">لا يوجد عملاء بعد</td></tr>';return;}
+    const rows=[];
+    for(const c of customersCache){ const {data:sales}=await db.from('sales').select('total').eq('customer_id',c.id).eq('payment_method','credit'); const {data:pays}=await db.from('customer_payments').select('amount').eq('customer_id',c.id); const credit=(sales||[]).reduce((a,x)=>a+Number(x.total),0), paid=(pays||[]).reduce((a,x)=>a+Number(x.amount),0); rows.push(`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.phone||'-')}</td><td>${credit.toFixed(2)}</td><td>${paid.toFixed(2)}</td><td style="font-weight:800;color:${credit-paid>0?'var(--red)':'var(--green)'}">${(credit-paid).toFixed(2)} ج.م</td></tr>`); }
+    body.innerHTML=rows.join('');
+  }
+
+  async function loadCustomerLedger(){
+    const id=document.getElementById('payment-customer')?.value; if(!id) return;
+    const {data:sales}=await db.from('sales').select('invoice_no,total,created_at,payment_method').eq('customer_id',id).order('created_at',{ascending:false});
+    const {data:pays}=await db.from('customer_payments').select('*').eq('customer_id',id).order('created_at',{ascending:false});
+    const rows=[]; (sales||[]).forEach(x=>rows.push(`<tr><td>فاتورة</td><td>${escapeHtml(x.invoice_no)}</td><td>${Number(x.total).toFixed(2)} ج.م</td><td>${x.payment_method==='credit'?'آجل':x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td></tr>`));
+    (pays||[]).forEach(x=>rows.push(`<tr><td style="color:var(--green)">دفعة</td><td>سداد حساب</td><td>${Number(x.amount).toFixed(2)} ج.م</td><td>${x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td></tr>`));
+    document.getElementById('customer-ledger-table').innerHTML=rows.join('')||'<tr><td colspan="5">لا توجد حركة</td></tr>';
+    const credit=(sales||[]).filter(x=>x.payment_method==='credit').reduce((a,x)=>a+Number(x.total),0), paid=(pays||[]).reduce((a,x)=>a+Number(x.amount),0);
+    document.getElementById('customer-current-balance').textContent='الرصيد المتبقي: '+(credit-paid).toFixed(2)+' ج.م';
+  }
+
+  async function addCustomerPayment(){
+    const customerId=document.getElementById('payment-customer').value, amount=Number(document.getElementById('customer-payment-amount').value)||0;
+    if(!customerId||amount<=0) return showMessage('اختر العميل واكتب مبلغاً صحيحاً',true);
+    const {data:sales}=await db.from('sales').select('total').eq('customer_id',customerId).eq('payment_method','credit'); const {data:pays}=await db.from('customer_payments').select('amount').eq('customer_id',customerId); const balance=(sales||[]).reduce((a,x)=>a+Number(x.total),0)-(pays||[]).reduce((a,x)=>a+Number(x.amount),0);
+    if(amount>balance) return showMessage('الدفعة أكبر من الرصيد المتبقي',true);
+    const {error}=await db.from('customer_payments').insert([{customer_id:customerId,amount,payment_method:document.getElementById('customer-payment-method').value,notes:document.getElementById('customer-payment-notes').value.trim()}]);
+    if(error) return showMessage('خطأ: '+error.message,true);
+    document.getElementById('customer-payment-amount').value=''; document.getElementById('customer-payment-notes').value=''; showMessage('تم تسجيل الدفعة وإضافتها للخزنة'); await loadCustomerLedger(); await renderCustomersTable();
+  }
+
   // --- التقارير ---
   async function loadReports() {
       let fromDate = document.getElementById('rep-from').value;
@@ -603,6 +757,10 @@
       const { data: items } = await itemsQuery;
       const { data: purchases } = await purchasesQuery;
       const { data: expenses } = await expensesQuery;
+      let customerPaymentsQuery = db.from('customer_payments').select('*');
+      if(fromDate) customerPaymentsQuery = customerPaymentsQuery.gte('created_at', fromDate);
+      if(toDate) customerPaymentsQuery = customerPaymentsQuery.lte('created_at', toDate + 'T23:59:59');
+      const { data: customerPayments } = await customerPaymentsQuery;
       
       let totalSales = 0, totalProfit = 0, totalItems = 0, totalExpenses = 0, totalPurchases = 0;
       let cashFromSales = 0, cashToSuppliers = 0, cashToExpenses = 0;
@@ -610,6 +768,9 @@
       (sales||[]).forEach(sale => { 
           totalSales += Number(sale.total); 
           if(sale.payment_method === 'cash') cashFromSales += Number(sale.total);
+      });
+      (customerPayments||[]).forEach(payment => {
+          if(payment.payment_method === 'cash') cashFromSales += Number(payment.amount);
       });
 
       (items||[]).forEach(item => {
@@ -836,7 +997,7 @@
       </tr>
     `).join('');
     
-    let payMethodAr = sale.payment_method === 'cash' ? 'كاش' : (sale.payment_method === 'instapay' ? 'إنستا باي' : 'محفظة إلكترونية');
+    let payMethodAr = sale.payment_method === 'cash' ? 'كاش' : (sale.payment_method === 'instapay' ? 'إنستا باي' : (sale.payment_method === 'wallet' ? 'محفظة إلكترونية' : 'آجل'));
 
     let html = `
       <div class="thermal-receipt" dir="rtl">
