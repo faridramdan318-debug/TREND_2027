@@ -1206,7 +1206,9 @@
     let style=document.getElementById('dynamic-print-style');
     if(!style){ style=document.createElement('style'); style.id='dynamic-print-style'; document.head.appendChild(style); }
     if(mode==='receipt'){
-      style.textContent='@media print { @page { size: 80mm auto; margin: 0; } html,body { width:80mm !important; min-width:80mm !important; height:auto !important; margin:0 !important; padding:0 !important; overflow:visible !important; } #receipt-window { width:80mm !important; height:auto !important; margin:0 !important; padding:0 !important; } .thermal-receipt { width:80mm !important; max-width:80mm !important; min-height:0 !important; } }';
+      const itemsCount=Number(arguments[1]||1);
+      const pageHeight=Math.min(250, Math.max(120, 82 + itemsCount*14));
+      style.textContent=`@media print { @page { size: 80mm ${pageHeight}mm; margin: 0; } html,body { width:80mm !important; min-width:80mm !important; height:${pageHeight}mm !important; margin:0 !important; padding:0 !important; overflow:visible !important; } #receipt-window { width:80mm !important; min-height:${pageHeight}mm !important; height:auto !important; margin:0 !important; padding:0 !important; } .thermal-receipt { width:80mm !important; max-width:80mm !important; min-height:0 !important; } }`;
     }else{
       style.textContent='@media print { @page { size: 50mm 25mm; margin: 0; } html,body { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; overflow:hidden !important; } #receipt-window { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; } }';
     }
@@ -1241,7 +1243,7 @@
   }
 
   function printReceipt(sale){
-    setPrintMode('receipt');
+    setPrintMode('receipt', sale.items?.length || 1);
     const now = new Date();
     const dateStr = now.toLocaleDateString('ar-EG');
     const timeStr = now.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
