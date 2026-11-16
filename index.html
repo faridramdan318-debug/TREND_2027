@@ -496,14 +496,17 @@
 
   function showMessage(text,error=false){const box=document.getElementById('message-box');box.textContent=text;box.className='message show '+(error?'error':'success');setTimeout(()=>box.classList.remove('show'),3000)}
 
-  async function init(){ 
-    const {data:wh} = await db.from('warehouses').select('*').eq('code', 'MAIN-01').single();
-    if(wh) defaultWarehouseId = wh.id;
-
-    const {data:privWh} = await db.from('warehouses').select('*').eq('code', 'PRIVATE-01').single();
-    if(privWh) privateWarehouseId = privWh.id;
-
-    await loadProducts(); 
+  async function init(){
+    let {data:wh} = await db.from('warehouses').select('*').in('code',['MAIN-01','MAIN']).order('id',{ascending:true}).limit(1).maybeSingle();
+    if(!wh){
+      const created=await db.from('warehouses').insert([{name:'المخزن الرئيسي',code:'MAIN',is_active:true}]).select().single();
+      if(created.error) return showMessage('تعذر تجهيز المخزن الرئيسي: '+created.error.message,true);
+      wh=created.data;
+    }
+    defaultWarehouseId=wh.id;
+    const {data:privWh} = await db.from('warehouses').select('*').in('code',['PRIVATE-01','PRIVATE']).order('id',{ascending:true}).limit(1).maybeSingle();
+    if(privWh) privateWarehouseId=privWh.id;
+    await loadProducts();
   }
   
   async function loadProducts(){
@@ -604,11 +607,12 @@
               if(prodError) throw prodError;
 
               // إضافة الرصيد للمخزن
-              await db.from('product_stock').insert([{
-                  product_id: prodData.id, 
-                  warehouse_id: defaultWarehouseId, 
+              const stockResult=await db.from('product_stock').insert([{
+                  product_id: prodData.id,
+                  warehouse_id: defaultWarehouseId,
                   quantity: item.qty
               }]);
+              if(stockResult.error) throw stockResult.error;
 
               // تسجيل الصنف في تفاصيل الفاتورة
               await db.from('purchase_items').insert([{
@@ -1012,6 +1016,8 @@
     const name=document.getElementById('p_name').value.trim();
     let barcode=document.getElementById('p_barcode').value.trim();
     const qty=parseInt(document.getElementById('p_quantity').value)||0;
+    if(!defaultWarehouseId){ await init(); }
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير جاهز، أعد تحميل الصفحة', true);
     
     if(!name) return showMessage('اكتب اسم اللعبة', true);
     if(!barcode) barcode = await generateShortBarcode();
