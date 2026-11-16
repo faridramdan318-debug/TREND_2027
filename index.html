@@ -383,6 +383,10 @@
                 </div>
             </div>
         </div>
+        <div class="card">
+          <h3>📚 سجل المبيعات — كل الفواتير محفوظة</h3>
+          <div class="table-wrap" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>رقم الفاتورة</th><th>الإجمالي بعد المرتجع</th><th>طريقة الدفع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="sales-history-table"></tbody></table></div>
+        </div>
       </section>
 
       <section id="page-settings" class="page">
@@ -471,6 +475,7 @@
     if(page==='suppliers') loadSuppliersPage();
     if(page==='customers') loadCustomersPage();
     if(page==='returns') renderReturnsCart();
+    if(page==='reports') { loadReports(); loadSalesHistory(); }
     if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
@@ -780,6 +785,13 @@
     document.getElementById('customer-payment-amount').value=''; document.getElementById('customer-payment-notes').value=''; showMessage('تم تسجيل الدفعة وإضافتها للخزنة'); await loadCustomerLedger(); await renderCustomersTable();
   }
 
+  async function loadSalesHistory(){
+    const body=document.getElementById('sales-history-table'); if(!body) return;
+    const {data,error}=await db.from('sales').select('id,invoice_no,total,payment_method,payment_status,created_at').order('id',{ascending:false});
+    if(error){ body.innerHTML='<tr><td colspan="5">تعذر تحميل سجل المبيعات: '+escapeHtml(error.message)+'</td></tr>'; return; }
+    body.innerHTML=(data||[]).map(s=>`<tr><td>${escapeHtml(s.invoice_no||('-'+s.id))}</td><td>${Number(s.total||0).toFixed(2)} ج.م</td><td>${s.payment_method==='cash'?'كاش':s.payment_method==='instapay'?'إنستا باي':s.payment_method==='wallet'?'محفظة':'آجل'}</td><td>${s.payment_status||'مسجلة'}</td><td>${s.created_at?new Date(s.created_at).toLocaleString('ar-EG'):'-'}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد فواتير</td></tr>';
+  }
+
   // --- المرتجعات ---
   let returnsCart=[];
 
@@ -788,8 +800,13 @@
   async function addReturnByBarcode(rawCode){
     const code=String(rawCode||'').trim().toLowerCase();
     if(!code) return;
-    const product=allProducts.find(p=>String(p.barcode).trim().toLowerCase()===code);
-    if(!product) return showMessage('الباركود غير موجود',true);
+    let product=allProducts.find(p=>String(p.barcode).trim().toLowerCase().replace(/\s+/g,'')===code.replace(/\s+/g,''));
+    if(!product){
+      const {data:dbProducts,error:productError}=await db.from('products').select('id,name,barcode,default_sale_price');
+      if(productError) return showMessage('تعذر البحث عن المنتج: '+productError.message,true);
+      product=(dbProducts||[]).find(p=>String(p.barcode||'').trim().toLowerCase().replace(/\s+/g,'')===code.replace(/\s+/g,''));
+    }
+    if(!product) return showMessage('الباركود غير موجود في المنتجات أو لم يتم حفظه',true);
     const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,sales(invoice_no,created_at)').eq('product_id',product.id).order('id',{ascending:false}).limit(30);
     if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
     let chosen=null;
