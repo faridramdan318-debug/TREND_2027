@@ -1060,7 +1060,7 @@
 
   function renderInventoryTable(){
     const body=document.getElementById('inventory-table');
-    body.innerHTML = allProducts.map((p,i)=>{
+    body.innerHTML = allProducts.filter(p=>Object.prototype.hasOwnProperty.call(stockByProduct,p.id)).map((p,i)=>{
       const stock = stockByProduct[p.id] || 0;
       return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabelById(${p.id})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button></td></tr>`;
     }).join('');
@@ -1103,10 +1103,22 @@
   }
 
   async function deleteProduct(id){
-    if(!confirm('حذف اللعبة نهائياً؟')) return;
-    await db.from('product_stock').delete().eq('product_id',id);
-    await db.from('products').delete().eq('id',id);
-    showMessage('تم الحذف'); loadProducts();
+    if(!confirm('حذف اللعبة من المخزن الرئيسي؟')) return;
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    try{
+      const stockDelete=await db.from('product_stock').delete().eq('product_id',id).eq('warehouse_id',defaultWarehouseId).select('id');
+      if(stockDelete.error) throw stockDelete.error;
+      // نترك product إذا كان له مبيعات حتى تظل المرتجعات وسجل الفواتير يعملان.
+      const salesCheck=await db.from('sales_items').select('id').eq('product_id',id).limit(1);
+      if(salesCheck.error) throw salesCheck.error;
+      if(!salesCheck.data?.length){
+        const productDelete=await db.from('products').delete().eq('id',id).select('id');
+        if(productDelete.error) throw productDelete.error;
+      }
+      delete stockByProduct[id];
+      showMessage('تم حذف الصنف من المخزن الرئيسي');
+      await loadProducts();
+    }catch(err){showMessage('لم يتم حذف الصنف: '+(err.message||err),true);}
   }
 
   async function updateAdminAccount(){
@@ -1194,10 +1206,17 @@
       if(input){ input.value=''; renderPOSProducts(); }
       return showMessage('الباركود غير موجود في الأصناف',true);
     }
-    const available=Number(stockByProduct[product.id]||0);
+    let available=Number(stockByProduct[product.id]||0);
+    // اقرأ الرصيد مباشرة من قاعدة البيانات إذا لم تكن الذاكرة محدثة.
+    if(available<=0 && defaultWarehouseId){
+      const stockResult=await db.from('product_stock').select('quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',product.id).maybeSingle();
+      if(stockResult.error) return showMessage('تعذر قراءة كمية الصنف من المخزن',true);
+      available=Number(stockResult.data?.quantity||0);
+      if(stockResult.data) stockByProduct[product.id]=available;
+    }
     if(available<=0){
       if(input){ input.value=''; renderPOSProducts(); }
-      return showMessage('الصنف موجود لكن كميته صفر في المخزن',true);
+      return showMessage('الصنف موجود لكن كميته صفر في المخزن الرئيسي',true);
     }
     addToCart(product.id);
     if(input){ input.value=''; renderPOSProducts(); input.blur(); }
