@@ -859,17 +859,19 @@
     let product=allProducts.find(p=>normalizeBarcode(p.barcode)===code);
     if(!product){
       const {data:dbProducts,error:productError}=await db.from('products').select('id,name,barcode,default_sale_price');
-      if(productError) return showMessage('تعذر البحث عن المنتج: '+productError.message,true);
+      if(productError) return showMessage('تعذر قراءة المنتجات من قاعدة البيانات',true);
       product=(dbProducts||[]).find(p=>normalizeBarcode(p.barcode)===code);
     }
-    // إذا لم يعد المنتج ظاهراً في المنتجات، ابحث في باركود محفوظ داخل سجل البيع.
-    if(!product){
-      const {data:savedRows,error:savedError}=await db.from('sales_items').select('product_id,product_name,product_barcode,price').not('product_barcode','is',null).order('id',{ascending:false}).limit(200);
-      if(savedError) return showMessage('تعذر البحث في سجل المبيعات: '+savedError.message,true);
-      const saved=(savedRows||[]).find(x=>normalizeBarcode(x.product_barcode)===code);
-      if(saved) product={id:saved.product_id,name:saved.product_name,barcode:saved.product_barcode,default_sale_price:saved.price};
+    // المصدر الأساسي للمرتجع هو سجل البيع نفسه، وليس قائمة المخزن.
+    // نقرأ السجلات ثم نطبع/نطابق الباركود داخل JavaScript حتى تعمل
+    // TR-123 و TR123 و TR 123 بنفس الطريقة.
+    const {data:savedRows,error:savedError}=await db.from('sales_items').select('id,product_id,product_name,product_barcode,price,quantity,sale_id').not('product_barcode','is',null).order('id',{ascending:false}).limit(2000);
+    if(savedError) return showMessage('تعذر قراءة سجل المبيعات للمرتجع',true);
+    const saved=(savedRows||[]).find(x=>normalizeBarcode(x.product_barcode)===code);
+    if(saved){
+      product=product||{id:saved.product_id,name:saved.product_name,barcode:saved.product_barcode,default_sale_price:saved.price};
     }
-    if(!product) return showMessage('الباركود غير موجود في المنتجات أو سجل المبيعات',true);
+    if(!product || !saved) return showMessage('هذا الباركود لم يُبع من النظام أو غير محفوظ داخل الفاتورة',true);
     const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,sales(invoice_no,created_at)').eq('product_id',product.id).order('id',{ascending:false}).limit(30);
     if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
     let chosen=null;
