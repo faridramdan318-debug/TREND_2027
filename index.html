@@ -1179,17 +1179,25 @@
     addProductByBarcode(code);
   }
 
-  function addProductByBarcode(code){
-    const clean=String(code).trim().toLowerCase();
-    const product=allProducts.find(p=>String(p.barcode).trim().toLowerCase()===clean);
+  async function addProductByBarcode(code){
+    const normalize=v=>String(v||'').toLowerCase().trim().replace(/[^a-z0-9]/g,'');
+    const clean=normalize(code);
     const input=document.getElementById('pos-search');
+    let product=allProducts.find(p=>normalize(p.barcode)===clean);
+    if(!product){
+      const result=await db.from('products').select('id,name,barcode,default_sale_price');
+      if(result.error) return showMessage('تعذر قراءة المنتجات من قاعدة البيانات',true);
+      product=(result.data||[]).find(p=>normalize(p.barcode)===clean);
+      if(product) allProducts.push(product);
+    }
     if(!product){
       if(input){ input.value=''; renderPOSProducts(); }
-      return showMessage('الباركود غير موجود في المخزن',true);
+      return showMessage('الباركود غير موجود في الأصناف',true);
     }
-    if(Number(stockByProduct[product.id]||0)<=0){
+    const available=Number(stockByProduct[product.id]||0);
+    if(available<=0){
       if(input){ input.value=''; renderPOSProducts(); }
-      return showMessage('الصنف غير موجود في المخزن حالياً',true);
+      return showMessage('الصنف موجود لكن كميته صفر في المخزن',true);
     }
     addToCart(product.id);
     if(input){ input.value=''; renderPOSProducts(); input.blur(); }
@@ -1204,7 +1212,7 @@
         const code=barcodeBuffer;
         barcodeBuffer='';
         clearTimeout(barcodeTimer);
-        if(isReturnsActive()) addReturnByBarcode(code); else addProductByBarcode(code);
+        if(document.getElementById('page-returns')?.classList.contains('active')) addReturnByBarcode(code); else if(document.getElementById('page-pos')?.classList.contains('active')) addProductByBarcode(code);
       }
       return;
     }
