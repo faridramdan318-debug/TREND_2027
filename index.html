@@ -620,8 +620,7 @@
                   product_id: prodData.id,
                   product_name: item.name,
                   quantity: item.qty,
-                  cost: item.cost,
-                  total: item.qty * item.cost
+                  cost: item.cost
               }]);
           }
 
@@ -755,14 +754,14 @@
       const invoiceNo='CUS-'+Date.now();
       const {data:sale,error:saleError}=await db.from('sales').insert([{invoice_no:invoiceNo,total,user_id:currentUserId,customer_id:customerId,payment_method:type,paid_amount:paid,payment_status:status}]).select().single();
       if(saleError) throw saleError;
-      const {error:itemError}=await db.from('sales_items').insert(items.map(x=>({sale_id:sale.id,product_id:x.product.id,product_name:x.product.name,product_barcode:x.product.barcode,quantity:x.qty,price:x.price,total:x.qty*x.price})));
+      const {error:itemError}=await db.from('sales_items').insert(items.map(x=>({sale_id:sale.id,product_id:x.product.id,product_name:x.product.name,product_barcode:x.product.barcode,quantity:x.qty,price:x.price})));
       if(itemError) throw itemError;
       for(const x of items){ const {data:st,error}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',x.product.id).single(); if(error||!st||Number(st.quantity)<x.qty) throw new Error('تعذر تحديث مخزون '+x.product.name); const r=await db.from('product_stock').update({quantity:Number(st.quantity)-x.qty}).eq('id',st.id); if(r.error) throw r.error; }
       if(paid>0){ const r=await db.from('customer_payments').insert([{customer_id:customerId,sale_id:sale.id,amount:paid,payment_method:document.getElementById('customer-initial-method').value,notes:'دفعة عند إنشاء الفاتورة'}]); if(r.error) throw r.error; }
       printReceipt({id:sale.id,invoice_no:invoiceNo,total,items:items.map(x=>({...x.product,qty:x.qty,default_sale_price:x.price})),payment_method:type});
       showMessage(`تم حفظ الفاتورة ${invoiceNo} والرصيد المتبقي ${(total-paid).toFixed(2)} ج.م`);
       document.getElementById('customer-sale-items').innerHTML=''; customerSaleRows=[]; document.getElementById('customer-initial-paid').value='0'; addCustomerSaleRow(); await loadProducts(); await loadCustomersPage();
-    }catch(err){ showMessage('خطأ في حفظ الفاتورة: '+err.message,true); }
+    }catch(err){ const raw=String(err?.message||err||''); showMessage(raw.includes('generated')||raw.includes('total')?'خطأ في أعمدة الإجمالي بقاعدة البيانات؛ تم إصلاح الكود، حدّث الصفحة وجرب مرة أخرى.':'لم يتم حفظ فاتورة العميل. تأكد من الجداول والصلاحيات.',true); console.error('Customer sale error:',raw); }
   }
 
   async function renderCustomersTable(){
@@ -1276,7 +1275,6 @@
       const itemsToInsert = cart.map(item => ({
         sale_id:saleData.id, product_id:item.id, product_name:item.name, product_barcode:item.barcode,
         quantity:item.qty, price:item.default_sale_price,
-        total:Number(item.default_sale_price)*Number(item.qty)
       }));
       const {error:itemsError} = await db.from('sales_items').insert(itemsToInsert);
       if(itemsError) throw itemsError;
@@ -1292,7 +1290,7 @@
       printReceipt({id:saleData.id,invoice_no:invoiceNo,total,items:cart,payment_method:paymentMethod});
       cart=[]; renderCart(); await loadProducts();
       showMessage('تم البيع وتحديث المخزون بنجاح!');
-    } catch(err){ showMessage('حدث خطأ أثناء البيع: '+(err.message || err), true); }
+    } catch(err){ const raw=String(err?.message||err||''); showMessage(raw.includes('generated')||raw.includes('total')?'خطأ في أعمدة الإجمالي؛ تم إصلاح الكود، حدّث الصفحة وجرب البيع مرة أخرى.':'لم يتم حفظ فاتورة البيع. راجع صلاحيات المبيعات والمخزون.',true); console.error('POS sale error:',raw); }
   }
 
   function setPrintMode(mode){
