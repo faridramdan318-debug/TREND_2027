@@ -302,7 +302,7 @@
             <div class="table-wrap" style="max-height:330px;overflow-y:auto"><table><thead><tr><th>العميل</th><th>الهاتف</th><th>إجمالي الآجل</th><th>المدفوع</th><th>المتبقي</th><th>إجراءات</th></tr></thead><tbody id="customers-table"></tbody></table></div>
           </div>
         </div>
-        <div class="card"><h3>📒 حركة العميل المحدد</h3><div class="table-wrap" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="customer-ledger-table"></tbody></table></div></div>
+        <div class="card"><h3>📒 حركة العميل المحدد <button class="btn secondary" style="float:left;padding:4px 8px" onclick="printCustomerStatement(document.getElementById('payment-customer').value)">طباعة كشف الحساب</button></h3><div class="table-wrap" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="customer-ledger-table"></tbody></table></div></div>
       </section>
 
       <section id="page-returns" class="page">
@@ -823,11 +823,41 @@
     const id=document.getElementById('payment-customer')?.value; if(!id) return;
     const {data:sales}=await db.from('sales').select('id,invoice_no,total,created_at,payment_method').eq('customer_id',id).order('created_at',{ascending:false});
     const {data:pays}=await db.from('customer_payments').select('*').eq('customer_id',id).order('created_at',{ascending:false});
-    const rows=[]; (sales||[]).forEach(x=>rows.push(`<tr><td>فاتورة</td><td>${escapeHtml(x.invoice_no)}</td><td>${Number(x.total).toFixed(2)} ج.م</td><td>${x.payment_method==='credit'?'آجل':x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td><td><button class=\"btn\" style=\"padding:3px 6px;background:var(--red)\" onclick=\"requireAdminAuth(()=>deleteCustomerSale(${x.id}))\">حذف</button></td></tr>`));
-    (pays||[]).forEach(x=>rows.push(`<tr><td style="color:var(--green)">دفعة</td><td>سداد حساب</td><td>${Number(x.amount).toFixed(2)} ج.م</td><td>${x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td><td><button class=\"btn\" style=\"padding:3px 6px;background:var(--red)\" onclick=\"requireAdminAuth(()=>deleteCustomerSale(${x.id}))\">حذف</button></td></tr>`));
-    document.getElementById('customer-ledger-table').innerHTML=rows.join('')||'<tr><td colspan="5">لا توجد حركة</td></tr>';
+    const rows=[]; (sales||[]).forEach(x=>rows.push(`<tr><td>فاتورة</td><td>${escapeHtml(x.invoice_no)}</td><td>${Number(x.total).toFixed(2)} ج.م</td><td>${x.payment_method==='credit'?'آجل':x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td><td><button class=\"btn secondary\" style=\"padding:3px 6px\" onclick=\"viewCustomerInvoice(${x.id})\">عرض / طباعة</button> <button class=\"btn\" style=\"padding:3px 6px;background:var(--red)\" onclick=\"requireAdminAuth(()=>deleteCustomerSale(${x.id}))\">حذف الفاتورة</button></td></tr>`));
+    (pays||[]).forEach(x=>rows.push(`<tr><td style="color:var(--green)">دفعة</td><td>${escapeHtml(x.notes||'سداد حساب')}</td><td>${Number(x.amount).toFixed(2)} ج.م</td><td>${x.payment_method}</td><td>${new Date(x.created_at).toLocaleDateString('ar-EG')}</td><td><button class=\"btn\" style=\"padding:3px 6px;background:var(--red)\" onclick=\"requireAdminAuth(()=>deleteCustomerPayment(${x.id}))\">حذف الدفعة</button></td></tr>`));
+    document.getElementById('customer-ledger-table').innerHTML=rows.join('')||'<tr><td colspan="6">لا توجد حركة</td></tr>';
     const credit=(sales||[]).filter(x=>x.payment_method==='credit').reduce((a,x)=>a+Number(x.total),0), paid=(pays||[]).reduce((a,x)=>a+Number(x.amount),0);
     document.getElementById('customer-current-balance').textContent='الرصيد المتبقي: '+(credit-paid).toFixed(2)+' ج.م';
+  }
+
+  async function viewCustomerInvoice(saleId){
+    const sr=await db.from('sales').select('id,invoice_no,total,created_at,payment_method').eq('id',saleId).single();
+    const ir=await db.from('sales_items').select('product_name,quantity,price').eq('sale_id',saleId).order('id');
+    if(sr.error||ir.error) return showMessage('تعذر تحميل الفاتورة',true);
+    printReceipt({...sr.data,items:(ir.data||[]).map(i=>({name:i.product_name,qty:Number(i.quantity),default_sale_price:Number(i.price)}))});
+  }
+
+  async function deleteCustomerPayment(paymentId){
+    if(!confirm('حذف دفعة العميل؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    const r=await db.from('customer_payments').delete().eq('id',paymentId).select('id');
+    if(r.error) return showMessage('لم يتم حذف الدفعة: '+r.error.message,true);
+    if(!r.data?.length) return showMessage('لم يتم حذف الدفعة، تحقق من صلاحيات Supabase',true);
+    showMessage('تم حذف الدفعة'); await loadCustomerLedger(); await renderCustomersTable();
+  }
+
+  async function printCustomerStatement(customerId){
+    if(!customerId) return showMessage('اختر عميلاً أولاً',true);
+    const c=(customersCache||[]).find(x=>String(x.id)===String(customerId));
+    const sr=await db.from('sales').select('invoice_no,total,created_at,payment_method').eq('customer_id',customerId).order('created_at',{ascending:true});
+    const pr=await db.from('customer_payments').select('amount,payment_method,notes,created_at').eq('customer_id',customerId).order('created_at',{ascending:true});
+    if(sr.error||pr.error) return showMessage('تعذر تحميل كشف الحساب',true);
+    const sales=sr.data||[], pays=pr.data||[];
+    const credit=sales.filter(x=>x.payment_method==='credit').reduce((a,x)=>a+Number(x.total||0),0), paid=pays.reduce((a,x)=>a+Number(x.amount||0),0);
+    const events=[...sales.map(x=>({d:x.created_at,t:'فاتورة',n:x.invoice_no,debit:Number(x.total||0),credit:0})),...pays.map(x=>({d:x.created_at,t:'دفعة',n:x.notes||'سداد حساب',debit:0,credit:Number(x.amount||0)}))].sort((a,b)=>new Date(a.d)-new Date(b.d));
+    const rows=events.map(x=>`<tr><td>${new Date(x.d).toLocaleDateString('ar-EG')}</td><td>${x.t}</td><td>${x.n}</td><td>${x.debit?x.debit.toFixed(2):'-'}</td><td>${x.credit?x.credit.toFixed(2):'-'}</td></tr>`).join('');
+    const w=window.open('','_blank','width=800,height=900'); if(!w) return showMessage('اسمح بالنوافذ المنبثقة لطباعة الكشف',true);
+    w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>كشف حساب</title><style>body{font-family:Arial;padding:25px}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #999;padding:9px;text-align:center}th{background:#eee}.sum{display:flex;justify-content:space-around;border:1px solid #999;padding:12px;margin-top:18px;font-weight:bold}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>TREND</h1><h2>كشف حساب العميل: ${escapeHtml(c?.name||'-')}</h2><div>الهاتف: ${escapeHtml(c?.phone||'-')}</div><table><thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead><tbody>${rows||'<tr><td colspan="5">لا توجد حركة</td></tr>'}</tbody></table><div class="sum"><span>الفواتير: ${credit.toFixed(2)} ج.م</span><span>المدفوع: ${paid.toFixed(2)} ج.م</span><span>المتبقي: ${(credit-paid).toFixed(2)} ج.م</span></div></body></html>`);
+    w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
   }
 
   async function deleteCustomerSale(saleId){
