@@ -796,10 +796,11 @@
       }
       const payments=await db.from('customer_payments').delete().eq('sale_id',saleId); if(payments.error) throw payments.error;
       const di=await db.from('sales_items').delete().eq('sale_id',saleId); if(di.error) throw di.error;
-      const ds=await db.from('sales').delete().eq('id',saleId); if(ds.error) throw ds.error;
+      const ds=await db.from('sales').delete().eq('id',saleId).select('id'); if(ds.error) throw ds.error;
+      if(!ds.data || !ds.data.length) throw new Error('DELETE_NOT_ALLOWED');
       showMessage('تم حذف فاتورة العميل وإرجاع الكمية للمخزن');
       await loadProducts(); await loadCustomersPage();
-    }catch(err){showMessage('لم يتم حذف فاتورة العميل. راجع صلاحيات الحذف في Supabase.',true);console.error(err);}
+    }catch(err){const msg=String(err?.message||err||''); showMessage(msg==='DELETE_NOT_ALLOWED'?'لم تُحذف الفاتورة: صلاحية الحذف غير مفعلة في Supabase.':'لم يتم حذف فاتورة العميل: '+msg,true);console.error(err);}
   }
 
   async function addCustomerPayment(){
@@ -818,8 +819,8 @@
     try{
       const {data:items,error:itemError}=await db.from('sales_items').select('id,product_id,quantity,product_name').eq('sale_id',saleId);
       if(itemError) throw itemError;
-      const {data:returned,error:returnError}=await db.from('sales_return_items').select('sale_item_id,quantity').eq('sale_id',saleId);
-      if(returnError && !String(returnError.message||'').includes('does not exist')) throw returnError;
+      const returnedResult=await db.from('sales_return_items').select('sale_item_id,quantity').eq('sale_id',saleId);
+      const returned=returnedResult.error?[]:returnedResult.data;
       const returnedByItem={}; (returned||[]).forEach(x=>{returnedByItem[x.sale_item_id]=(returnedByItem[x.sale_item_id]||0)+Number(x.quantity||0);});
       for(const item of (items||[])){
         const net=Math.max(0,Number(item.quantity)-Number(returnedByItem[item.id]||0));
@@ -870,7 +871,8 @@
     if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
     let chosen=null;
     for(const item of (candidates||[])){
-      const {data:returned}=await db.from('sales_return_items').select('quantity').eq('sale_item_id',item.id);
+      const returnedResult=await db.from('sales_return_items').select('quantity').eq('sale_item_id',item.id);
+      const returned=returnedResult.error?[]:returnedResult.data;
       const already=(returned||[]).reduce((sum,x)=>sum+Number(x.quantity),0);
       if(already < Number(item.quantity)) { chosen={...item,available:Number(item.quantity)-already}; break; }
     }
