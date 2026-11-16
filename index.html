@@ -879,7 +879,7 @@
       const returnNo='RET-'+Date.now();
       const {data:header,error:headerError}=await db.from('sales_returns').insert([{return_no:returnNo,sale_id:sameSale,user_id:currentUserId,total}]).select().single();
       if(headerError) throw headerError;
-      const {error:itemError}=await db.from('sales_return_items').insert(returnsCart.map(x=>({return_id:header.id,sale_id:x.saleId,sale_item_id:x.saleItemId,product_id:x.productId,product_name:x.name,quantity:x.qty,price:x.price,total:x.qty*x.price})));
+      const {error:itemError}=await db.from('sales_return_items').insert(returnsCart.map(x=>({return_id:header.id,sale_id:x.saleId,sale_item_id:x.saleItemId,product_id:x.productId,product_name:x.name,quantity:x.qty,price:x.price})));
       if(itemError) throw itemError;
       for(const x of returnsCart){
         const {data:stock,error:stockReadError}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',x.productId).maybeSingle();
@@ -898,7 +898,16 @@
       }
       returnsCart=[]; renderReturnsCart(); await loadProducts();
       showMessage(`تم تأكيد المرتجع ${returnNo} وإضافة الأصناف للمخزن وخصم ${total.toFixed(2)} ج.م من المبيعات`);
-    }catch(err){showMessage('لم يتم حفظ المرتجع: '+(err.message||err),true);}
+    }catch(err){
+      const raw=String(err?.message||err||'');
+      let msg='لم يتم حفظ المرتجع. راجع الجداول والصلاحيات في Supabase.';
+      if(raw.includes('sales_returns')||raw.includes('sales_return_items')) msg='جداول المرتجعات غير جاهزة في قاعدة البيانات؛ شغّل ملف إصلاح المرتجعات.';
+      else if(raw.includes('generated')||raw.includes('total')) msg='خطأ في إعداد إجمالي المرتجع؛ تم إصلاح الكود، حدّث الصفحة وجرب مرة أخرى.';
+      else if(raw.includes('product_stock')) msg='تعذر تحديث المخزن؛ تأكد من وجود المخزن الرئيسي.';
+      else if(raw.includes('permission')||raw.includes('policy')||raw.includes('row-level')) msg='لا توجد صلاحية لحفظ المرتجع؛ راجع سياسات Supabase.';
+      showMessage(msg,true);
+      console.error('Return save error:',raw);
+    }
   }
 
   // --- التقارير ---
