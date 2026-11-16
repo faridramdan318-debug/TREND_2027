@@ -790,7 +790,7 @@
     if(!code) return;
     const product=allProducts.find(p=>String(p.barcode).trim().toLowerCase()===code);
     if(!product) return showMessage('الباركود غير موجود',true);
-    const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,created_at,sales(invoice_no,created_at)').eq('product_id',product.id).order('created_at',{ascending:false}).limit(30);
+    const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,sales(invoice_no,created_at)').eq('product_id',product.id).order('id',{ascending:false}).limit(30);
     if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
     let chosen=null;
     for(const item of (candidates||[])){
