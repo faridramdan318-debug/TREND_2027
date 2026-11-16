@@ -367,6 +367,16 @@
       <section id="page-settings" class="page">
         <div class="card"><h3>➕ إضافة موظف</h3><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:15px;"><div class="form-group"><label>المستخدم</label><input id="u_name"></div><div class="form-group"><label>الباسورد</label><input id="u_pass"></div><div class="form-group"><label>الصلاحية</label><select id="u_role"><option value="cashier">كاشير</option><option value="admin">مدير</option></select></div></div><button class="btn" onclick="addEmployee()" style="width:auto;">حفظ</button></div>
         <div class="card"><h3>👥 الموظفين</h3><table><thead><tr><th>#</th><th>الاسم</th><th>الصلاحية</th><th>حذف</th></tr></thead><tbody id="employees-table"></tbody></table></div>
+        <div class="card" id="admin-account-card" style="display:none">
+          <h3>🔐 تغيير بيانات حساب المدير</h3>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:15px">تغيير اسم المستخدم أو كلمة المرور للحساب الذي سجلت الدخول به.</p>
+          <div class="form-row">
+            <div class="form-group"><label>اسم المستخدم الجديد</label><input id="admin-new-username" autocomplete="username"></div>
+            <div class="form-group"><label>كلمة المرور الجديدة</label><input id="admin-new-password" type="password" autocomplete="new-password"></div>
+          </div>
+          <div class="form-group"><label>تأكيد كلمة المرور الجديدة</label><input id="admin-confirm-password" type="password" autocomplete="new-password"></div>
+          <button class="btn" onclick="updateAdminAccount()">حفظ بيانات المدير</button>
+        </div>
         
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
@@ -388,7 +398,8 @@
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   let allProducts=[], stockByProduct={}, storageStock={}, cart=[], defaultWarehouseId=null, privateWarehouseId=null;
   let currentUserRole = '';
-  let currentUserId = null; 
+  let currentUserId = null;
+  let currentUsername = ''; 
   
   let bcScale = parseFloat(localStorage.getItem('bc_scale_v4') || '96');
   let bcWidth = parseFloat(localStorage.getItem('bc_width_v4') || '0.5');
@@ -400,7 +411,8 @@
     const {data} = await db.from('users').select('*').eq('username',user).eq('password',pass).single();
     if(data){
       currentUserRole = data.role;
-      currentUserId = data.id; 
+      currentUserId = data.id;
+      currentUsername = data.username; 
       document.getElementById('login-screen').style.display='none';
       if(currentUserRole === 'admin') {
         document.getElementById('nav-reports').style.display='flex';
@@ -440,6 +452,10 @@
     if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
+        const accountCard=document.getElementById('admin-account-card');
+        if(accountCard) accountCard.style.display=currentUserRole==='admin'?'block':'none';
+        const usernameInput=document.getElementById('admin-new-username');
+        if(usernameInput) usernameInput.value=currentUsername;
         document.getElementById('barcode_scale').value = bcScale;
         document.getElementById('barcode_width').value = bcWidth;
         document.getElementById('barcode_height').value = bcHeight;
@@ -901,6 +917,28 @@
     await db.from('product_stock').delete().eq('product_id',id);
     await db.from('products').delete().eq('id',id);
     showMessage('تم الحذف'); loadProducts();
+  }
+
+  async function updateAdminAccount(){
+    if(currentUserRole!=='admin' || !currentUserId) return showMessage('هذا الإجراء للمدير فقط',true);
+    const username=document.getElementById('admin-new-username').value.trim();
+    const password=document.getElementById('admin-new-password').value;
+    const confirmPassword=document.getElementById('admin-confirm-password').value;
+    if(!username) return showMessage('اكتب اسم المستخدم الجديد',true);
+    if(!password) return showMessage('اكتب كلمة المرور الجديدة',true);
+    if(password.length<4) return showMessage('كلمة المرور يجب أن تكون 4 أحرف أو أرقام على الأقل',true);
+    if(password!==confirmPassword) return showMessage('تأكيد كلمة المرور غير مطابق',true);
+    try{
+      const {data:existing,error:checkError}=await db.from('users').select('id').eq('username',username).neq('id',currentUserId).maybeSingle();
+      if(checkError) throw checkError;
+      if(existing) return showMessage('اسم المستخدم مستخدم بالفعل',true);
+      const {error}=await db.from('users').update({username,password}).eq('id',currentUserId).select('id').single();
+      if(error) throw error;
+      currentUsername=username;
+      document.getElementById('admin-new-password').value='';
+      document.getElementById('admin-confirm-password').value='';
+      showMessage('تم تغيير اسم المستخدم وكلمة المرور بنجاح');
+    }catch(err){ showMessage('لم يتم تغيير بيانات المدير: '+(err.message||err),true); }
   }
 
   async function addEmployee(){
