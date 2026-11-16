@@ -95,6 +95,7 @@
     .thermal-receipt .footer img.logo { width: 70px; height: auto; filter: grayscale(100%); margin-bottom: 5px; }
     .thermal-receipt .footer svg#invoice-bc { margin: 5px auto; display: block; height: 40px !important; width: 80% !important; }
     .thermal-receipt .footer .qr-container { margin-top: 5px; display:flex; justify-content:center; }
+    .thermal-receipt .footer .qr-container canvas, .thermal-receipt .footer .qr-container img { width: 95px !important; height: 95px !important; display: block; }
 
     .barcode-label { width: 50mm; height: 25mm; padding: 1mm 1mm; box-sizing: border-box; text-align: center; margin: 0; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; overflow: hidden; }
     @page { size: 50mm 25mm; margin: 0; }
@@ -102,7 +103,7 @@
     .barcode-label h2 { font-size: 11px; line-height: 12px; margin: 0; font-weight: bold; font-family: 'Fredoka'; }
     .barcode-label .p-name { font-size: 8px; line-height: 9px; margin: 0; font-weight: bold; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .barcode-label .p-price { font-size: 10px; line-height: 11px; font-weight: bold; margin: 1px 0; }
-    .barcode-label svg { width: 98% !important; height: 14px !important; display: block; margin: 0 auto; }
+    .barcode-label svg { width: 98%; height: 14px; display: block; margin: 0 auto; }
     .barcode-label .bc-number { font-size: 6px; line-height: 7px; letter-spacing: .35px; }
     #receipt-window { width: 50mm; height: 25mm; margin: 0; padding: 0; }
 
@@ -140,6 +141,7 @@
       <button class="nav-btn" onclick="switchPage('storage',this)"><span>🏬</span> المخزن المنفصل</button>
       <button class="nav-btn" onclick="switchPage('suppliers',this)"><span>🚚</span> الموردين والمشتريات</button>
       <button class="nav-btn" onclick="switchPage('customers',this)"><span>👥</span> العملاء والحسابات</button>
+      <button class="nav-btn" onclick="switchPage('returns',this)"><span>↩️</span> المرتجعات</button>
       <button class="nav-btn" onclick="switchPage('expenses',this)"><span>💸</span> المصروفات</button>
       <button class="nav-btn" onclick="switchPage('reports',this)" id="nav-reports" style="display:none;"><span>📊</span> التقارير</button>
       <button class="nav-btn" onclick="switchPage('settings',this)" id="nav-settings" style="display:none;"><span>⚙️</span> الإعدادات</button>
@@ -294,6 +296,24 @@
         <div class="card"><h3>📒 حركة العميل المحدد</h3><div class="table-wrap" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th></tr></thead><tbody id="customer-ledger-table"></tbody></table></div></div>
       </section>
 
+      <section id="page-returns" class="page">
+        <div class="hero"><div><h3>المرتجعات ↩️</h3><p>قف في خانة الباركود وامسح الصنف؛ سيظهر هنا ثم أعده للمخزن بتأكيد واحد.</p></div><div class="hero-art">📦</div></div>
+        <div class="card">
+          <h3>🔎 قراءة باركود المرتجع</h3>
+          <div class="search-invoice">
+            <input id="return-barcode" type="text" placeholder="امسح الباركود ثم اضغط Enter" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addReturnByBarcode(this.value);this.value='';}">
+            <button class="btn" onclick="addReturnByBarcode(document.getElementById('return-barcode').value)">إضافة المرتجع</button>
+          </div>
+          <p style="color:var(--muted);font-size:12px">بعد فتح الشاشة لا تحتاج للضغط داخل الخانة؛ امسح الباركودات وراء بعض.</p>
+        </div>
+        <div class="card">
+          <h3>📋 أصناف جاهزة للمرتجع</h3>
+          <div class="table-wrap" style="max-height:360px;overflow-y:auto"><table><thead><tr><th>الصنف</th><th>الفاتورة</th><th>السعر</th><th>الكمية</th><th>الإجمالي</th><th>حذف</th></tr></thead><tbody id="returns-cart"></tbody></table></div>
+          <div class="total" style="margin-top:15px"><span>إجمالي المرتجع</span><strong id="returns-total">0.00 ج.م</strong></div>
+          <button class="btn full" onclick="confirmReturns()">تأكيد المرتجع وإرجاعه للمخزن</button>
+        </div>
+      </section>
+
       <section id="page-expenses" class="page">
         <div class="hero"><div><h3>سجل المصروفات 💸</h3><p>سجل كل مصاريف المحل عشان تحسب صافي الربح بدقة.</p></div><div class="hero-art">💸</div></div>
         <div class="grid-two">
@@ -380,9 +400,9 @@
         
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
-            <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="98" min="70" max="98"></div>
-            <div class="form-row"><div class="form-group"><label>سُمك خطوط الباركود</label><input type="number" id="barcode_width" value="0.8" step="0.1" min="0.2" max="1.5"></div><div class="form-group"><label>طول خطوط الباركود (px)</label><input type="number" id="barcode_height" value="14" min="5" max="18"></div></div>
-            <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button>
+            <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="98" min="30" max="98"></div>
+            <div class="form-row"><div class="form-group"><label>سُمك خطوط الباركود</label><input type="number" id="barcode_width" value="0.8" step="0.1" min="0.2" max="2"></div><div class="form-group"><label>طول خطوط الباركود (px)</label><input type="number" id="barcode_height" value="14" min="5" max="18"></div></div>
+            <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button><p style="color:var(--muted);font-size:12px;margin-top:10px">غيّر القيم ثم اضغط حفظ الإعدادات. العرض يتحكم في امتلاء الورقة، والسُمك والطول يتحكمان في وضوح القراءة.</p>
         </div>
       </section>
     </main>
@@ -443,12 +463,13 @@
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
     button.classList.add('active');
     
-    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخزن المنفصل':page==='suppliers'?'الموردين والمشتريات':page==='customers'?'العملاء والحسابات':page==='expenses'?'المصروفات':page==='reports'?'التقارير':'الإعدادات';
+    document.getElementById('page-title').textContent=page==='pos'?'نقطة البيع':page==='inventory'?'المخزن والأصناف':page==='storage'?'المخزن المنفصل':page==='suppliers'?'الموردين والمشتريات':page==='customers'?'العملاء والحسابات':page==='returns'?'المرتجعات':page==='expenses'?'المصروفات':page==='reports'?'التقارير':'الإعدادات';
     
     if(page==='pos') loadProducts();
     if(page==='storage') loadPrivateWarehouse();
     if(page==='suppliers') loadSuppliersPage();
     if(page==='customers') loadCustomersPage();
+    if(page==='returns') renderReturnsCart();
     if(page==='reports') loadReports();
     if(page==='settings') {
         loadEmployees();
@@ -758,6 +779,78 @@
     document.getElementById('customer-payment-amount').value=''; document.getElementById('customer-payment-notes').value=''; showMessage('تم تسجيل الدفعة وإضافتها للخزنة'); await loadCustomerLedger(); await renderCustomersTable();
   }
 
+  // --- المرتجعات ---
+  let returnsCart=[];
+
+  function isReturnsActive(){ return document.getElementById('page-returns')?.classList.contains('active'); }
+
+  async function addReturnByBarcode(rawCode){
+    const code=String(rawCode||'').trim().toLowerCase();
+    if(!code) return;
+    const product=allProducts.find(p=>String(p.barcode).trim().toLowerCase()===code);
+    if(!product) return showMessage('الباركود غير موجود',true);
+    const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,created_at,sales(invoice_no,created_at)').eq('product_id',product.id).order('created_at',{ascending:false}).limit(30);
+    if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
+    let chosen=null;
+    for(const item of (candidates||[])){
+      const {data:returned}=await db.from('sales_return_items').select('quantity').eq('sale_item_id',item.id);
+      const already=(returned||[]).reduce((sum,x)=>sum+Number(x.quantity),0);
+      if(already < Number(item.quantity)) { chosen={...item,available:Number(item.quantity)-already}; break; }
+    }
+    if(!chosen) return showMessage('لا توجد كمية قابلة للمرتجع لهذا الصنف',true);
+    const existing=returnsCart.find(x=>x.saleItemId===chosen.id);
+    if(existing){ if(existing.qty>=existing.available) return showMessage('تم تجهيز كامل كمية هذا الصنف للمرتجع',true); existing.qty++; }
+    else returnsCart.push({saleItemId:chosen.id,saleId:chosen.sale_id,productId:chosen.product_id,name:chosen.product_name,price:Number(chosen.price),qty:1,available:chosen.available,invoiceNo:chosen.sales?.invoice_no||'-'});
+    renderReturnsCart();
+    const input=document.getElementById('return-barcode'); if(input){input.value='';input.blur();}
+    showMessage('تمت إضافة الصنف لقائمة المرتجع');
+  }
+
+  function changeReturnQty(index,delta){
+    const item=returnsCart[index]; if(!item) return;
+    item.qty+=delta;
+    if(item.qty<=0) returnsCart.splice(index,1);
+    else if(item.qty>item.available) item.qty=item.available;
+    renderReturnsCart();
+  }
+  function removeReturn(index){ returnsCart.splice(index,1); renderReturnsCart(); }
+  function renderReturnsCart(){
+    const body=document.getElementById('returns-cart'); if(!body) return;
+    let total=0;
+    body.innerHTML=returnsCart.map((x,i)=>{const line=x.qty*x.price;total+=line;return `<tr><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.invoiceNo)}</td><td>${x.price.toFixed(2)} ج.م</td><td><button type="button" onclick="changeReturnQty(${i},-1)">−</button> ${x.qty} <button type="button" onclick="changeReturnQty(${i},1)">+</button></td><td>${line.toFixed(2)} ج.م</td><td><button type="button" onclick="removeReturn(${i})" style="border:0;background:none;color:var(--red);font-size:18px">✖</button></td></tr>`;}).join('')||'<tr><td colspan="6">لم تتم إضافة مرتجعات</td></tr>';
+    document.getElementById('returns-total').textContent=total.toFixed(2)+' ج.م';
+  }
+
+  async function confirmReturns(){
+    if(!returnsCart.length) return showMessage('أضف صنفاً واحداً على الأقل',true);
+    const total=returnsCart.reduce((sum,x)=>sum+x.qty*x.price,0);
+    try{
+      const sameSale=returnsCart.every(x=>x.saleId===returnsCart[0].saleId)?returnsCart[0].saleId:null;
+      const returnNo='RET-'+Date.now();
+      const {data:header,error:headerError}=await db.from('sales_returns').insert([{return_no:returnNo,sale_id:sameSale,user_id:currentUserId,total}]).select().single();
+      if(headerError) throw headerError;
+      const {error:itemError}=await db.from('sales_return_items').insert(returnsCart.map(x=>({return_id:header.id,sale_id:x.saleId,sale_item_id:x.saleItemId,product_id:x.productId,product_name:x.name,quantity:x.qty,price:x.price,total:x.qty*x.price})));
+      if(itemError) throw itemError;
+      for(const x of returnsCart){
+        const {data:stock,error:stockReadError}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',x.productId).maybeSingle();
+        if(stockReadError) throw stockReadError;
+        if(stock){const r=await db.from('product_stock').update({quantity:Number(stock.quantity)+x.qty}).eq('id',stock.id);if(r.error)throw r.error;}
+        else {const r=await db.from('product_stock').insert([{product_id:x.productId,warehouse_id:defaultWarehouseId,quantity:x.qty}]);if(r.error)throw r.error;}
+      }
+      for(const saleId of [...new Set(returnsCart.map(x=>x.saleId))]){
+        const {data:sale,error:saleReadError}=await db.from('sales').select('total,paid_amount').eq('id',saleId).single();
+        if(saleReadError) throw saleReadError;
+        const amount=returnsCart.filter(x=>x.saleId===saleId).reduce((sum,x)=>sum+x.qty*x.price,0);
+        const newTotal=Math.max(0,Number(sale.total)-amount);
+        const paid=Number(sale.paid_amount||0);
+        const status=paid>=newTotal?'paid':paid>0?'partial':'due';
+        const r=await db.from('sales').update({total:newTotal,payment_status:status}).eq('id',saleId);if(r.error)throw r.error;
+      }
+      returnsCart=[]; renderReturnsCart(); await loadProducts();
+      showMessage(`تم تأكيد المرتجع ${returnNo} وإضافة الأصناف للمخزن وخصم ${total.toFixed(2)} ج.م من المبيعات`);
+    }catch(err){showMessage('لم يتم حفظ المرتجع: '+(err.message||err),true);}
+  }
+
   // --- التقارير ---
   async function loadReports() {
       let fromDate = document.getElementById('rep-from').value;
@@ -953,8 +1046,8 @@
   }
 
   function saveBarcodeSettings() {
-      bcScale = Math.max(30, Math.min(90, parseFloat(document.getElementById('barcode_scale').value) || 98));
-      bcWidth = Math.max(0.2, Math.min(1.5, parseFloat(document.getElementById('barcode_width').value) || 0.8));
+      bcScale = Math.max(30, Math.min(98, parseFloat(document.getElementById('barcode_scale').value) || 98));
+      bcWidth = Math.max(0.2, Math.min(2, parseFloat(document.getElementById('barcode_width').value) || 0.8));
       bcHeight = Math.max(5, Math.min(18, parseFloat(document.getElementById('barcode_height').value) || 14));
       localStorage.setItem('bc_scale_v5', bcScale);
       localStorage.setItem('bc_width_v5', bcWidth);
@@ -1006,7 +1099,7 @@
   }
 
   function handleGlobalBarcodeKey(event){
-    if(!isPOSActive()) return;
+    if(!isPOSActive() && !isReturnsActive()) return;
     // Most USB scanners send characters rapidly and finish with Enter.
     if(event.key==='Enter'){
       if(barcodeBuffer.length>=2){
@@ -1014,7 +1107,7 @@
         const code=barcodeBuffer;
         barcodeBuffer='';
         clearTimeout(barcodeTimer);
-        addProductByBarcode(code);
+        if(isReturnsActive()) addReturnByBarcode(code); else addProductByBarcode(code);
       }
       return;
     }
@@ -1126,8 +1219,8 @@
     });
     const barcodeSvg = document.getElementById('bc');
     barcodeSvg.setAttribute('preserveAspectRatio','none');
-    barcodeSvg.style.width = Math.max(70, Math.min(98, bcScale)) + '%';
-    barcodeSvg.style.height = Math.max(10, Math.min(16, bcHeight)) + 'px';
+    barcodeSvg.style.setProperty('width', Math.max(50, Math.min(98, bcScale)) + '%', 'important');
+    barcodeSvg.style.setProperty('height', Math.max(6, Math.min(18, bcHeight)) + 'px', 'important');
     barcodeSvg.style.display = 'block';
     barcodeSvg.style.margin = '0 auto';
     setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; }, 500);
@@ -1202,8 +1295,8 @@
     qrDiv.innerHTML = ''; 
     new QRCode(qrDiv, {
         text: WEBSITE_URL,
-        width: 65,
-        height: 65,
+        width: 95,
+        height: 95,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
