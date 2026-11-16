@@ -385,7 +385,7 @@
         </div>
         <div class="card">
           <h3>📚 سجل المبيعات — كل الفواتير محفوظة</h3>
-          <div class="table-wrap" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>رقم الفاتورة</th><th>الإجمالي بعد المرتجع</th><th>طريقة الدفع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="sales-history-table"></tbody></table></div>
+          <div class="table-wrap" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>رقم الفاتورة</th><th>الإجمالي بعد المرتجع</th><th>طريقة الدفع</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="sales-history-table"></tbody></table></div>
         </div>
       </section>
 
@@ -747,7 +747,7 @@
       const invoiceNo='CUS-'+Date.now();
       const {data:sale,error:saleError}=await db.from('sales').insert([{invoice_no:invoiceNo,total,user_id:currentUserId,customer_id:customerId,payment_method:type,paid_amount:paid,payment_status:status}]).select().single();
       if(saleError) throw saleError;
-      const {error:itemError}=await db.from('sales_items').insert(items.map(x=>({sale_id:sale.id,product_id:x.product.id,product_name:x.product.name,quantity:x.qty,price:x.price,total:x.qty*x.price})));
+      const {error:itemError}=await db.from('sales_items').insert(items.map(x=>({sale_id:sale.id,product_id:x.product.id,product_name:x.product.name,product_barcode:x.product.barcode,quantity:x.qty,price:x.price,total:x.qty*x.price})));
       if(itemError) throw itemError;
       for(const x of items){ const {data:st,error}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',x.product.id).single(); if(error||!st||Number(st.quantity)<x.qty) throw new Error('تعذر تحديث مخزون '+x.product.name); const r=await db.from('product_stock').update({quantity:Number(st.quantity)-x.qty}).eq('id',st.id); if(r.error) throw r.error; }
       if(paid>0){ const r=await db.from('customer_payments').insert([{customer_id:customerId,sale_id:sale.id,amount:paid,payment_method:document.getElementById('customer-initial-method').value,notes:'دفعة عند إنشاء الفاتورة'}]); if(r.error) throw r.error; }
@@ -785,11 +785,35 @@
     document.getElementById('customer-payment-amount').value=''; document.getElementById('customer-payment-notes').value=''; showMessage('تم تسجيل الدفعة وإضافتها للخزنة'); await loadCustomerLedger(); await renderCustomersTable();
   }
 
+  async function deleteSaleAndRestore(saleId){
+    if(!confirm('حذف الفاتورة وإرجاع الكمية للمخزن؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    try{
+      const {data:items,error:itemError}=await db.from('sales_items').select('id,product_id,quantity,product_name').eq('sale_id',saleId);
+      if(itemError) throw itemError;
+      const {data:returned,error:returnError}=await db.from('sales_return_items').select('sale_item_id,quantity').eq('sale_id',saleId);
+      if(returnError && !String(returnError.message||'').includes('does not exist')) throw returnError;
+      const returnedByItem={}; (returned||[]).forEach(x=>{returnedByItem[x.sale_item_id]=(returnedByItem[x.sale_item_id]||0)+Number(x.quantity||0);});
+      for(const item of (items||[])){
+        const net=Math.max(0,Number(item.quantity)-Number(returnedByItem[item.id]||0));
+        if(!net) continue;
+        const {data:stock,error:stockError}=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',item.product_id).maybeSingle();
+        if(stockError) throw stockError;
+        if(stock){const r=await db.from('product_stock').update({quantity:Number(stock.quantity)+net}).eq('id',stock.id);if(r.error)throw r.error;}
+        else {const r=await db.from('product_stock').insert([{product_id:item.product_id,warehouse_id:defaultWarehouseId,quantity:net}]);if(r.error)throw r.error;}
+      }
+      const di=await db.from('sales_items').delete().eq('sale_id',saleId); if(di.error) throw di.error;
+      const ds=await db.from('sales').delete().eq('id',saleId); if(ds.error) throw ds.error;
+      showMessage('تم حذف الفاتورة وإرجاع الكمية المتبقية للمخزن');
+      await loadProducts(); await loadSalesHistory(); await loadReports();
+    }catch(err){showMessage('لم يتم حذف الفاتورة: '+(err.message||err),true);}
+  }
+
   async function loadSalesHistory(){
     const body=document.getElementById('sales-history-table'); if(!body) return;
     const {data,error}=await db.from('sales').select('id,invoice_no,total,payment_method,payment_status,created_at').order('id',{ascending:false});
     if(error){ body.innerHTML='<tr><td colspan="5">تعذر تحميل سجل المبيعات: '+escapeHtml(error.message)+'</td></tr>'; return; }
-    body.innerHTML=(data||[]).map(s=>`<tr><td>${escapeHtml(s.invoice_no||('-'+s.id))}</td><td>${Number(s.total||0).toFixed(2)} ج.م</td><td>${s.payment_method==='cash'?'كاش':s.payment_method==='instapay'?'إنستا باي':s.payment_method==='wallet'?'محفظة':'آجل'}</td><td>${s.payment_status||'مسجلة'}</td><td>${s.created_at?new Date(s.created_at).toLocaleString('ar-EG'):'-'}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد فواتير</td></tr>';
+    body.innerHTML=(data||[]).map(s=>`<tr><td>${escapeHtml(s.invoice_no||('-'+s.id))}</td><td>${Number(s.total||0).toFixed(2)} ج.م</td><td>${s.payment_method==='cash'?'كاش':s.payment_method==='instapay'?'إنستا باي':s.payment_method==='wallet'?'محفظة':'آجل'}</td><td>${s.payment_status||'مسجلة'}</td><td>${s.created_at?new Date(s.created_at).toLocaleString('ar-EG'):'-'}</td><td><button class="btn" style="padding:4px 8px;background:var(--red)" onclick="requireAdminAuth(()=>deleteSaleAndRestore(${s.id}))">حذف وإرجاع المخزون</button></td></tr>`).join('')||'<tr><td colspan="6">لا توجد فواتير</td></tr>';
   }
 
   // --- المرتجعات ---
@@ -798,15 +822,23 @@
   function isReturnsActive(){ return document.getElementById('page-returns')?.classList.contains('active'); }
 
   async function addReturnByBarcode(rawCode){
-    const code=String(rawCode||'').trim().toLowerCase();
+    const normalizeBarcode=v=>String(v||'').toLowerCase().trim().replace(/[^a-z0-9]/g,'');
+    const code=normalizeBarcode(rawCode);
     if(!code) return;
-    let product=allProducts.find(p=>String(p.barcode).trim().toLowerCase().replace(/\s+/g,'')===code.replace(/\s+/g,''));
+    let product=allProducts.find(p=>normalizeBarcode(p.barcode)===code);
     if(!product){
       const {data:dbProducts,error:productError}=await db.from('products').select('id,name,barcode,default_sale_price');
       if(productError) return showMessage('تعذر البحث عن المنتج: '+productError.message,true);
-      product=(dbProducts||[]).find(p=>String(p.barcode||'').trim().toLowerCase().replace(/\s+/g,'')===code.replace(/\s+/g,''));
+      product=(dbProducts||[]).find(p=>normalizeBarcode(p.barcode)===code);
     }
-    if(!product) return showMessage('الباركود غير موجود في المنتجات أو لم يتم حفظه',true);
+    // إذا لم يعد المنتج ظاهراً في المنتجات، ابحث في باركود محفوظ داخل سجل البيع.
+    if(!product){
+      const {data:savedRows,error:savedError}=await db.from('sales_items').select('product_id,product_name,product_barcode,price').not('product_barcode','is',null).order('id',{ascending:false}).limit(200);
+      if(savedError) return showMessage('تعذر البحث في سجل المبيعات: '+savedError.message,true);
+      const saved=(savedRows||[]).find(x=>normalizeBarcode(x.product_barcode)===code);
+      if(saved) product={id:saved.product_id,name:saved.product_name,barcode:saved.product_barcode,default_sale_price:saved.price};
+    }
+    if(!product) return showMessage('الباركود غير موجود في المنتجات أو سجل المبيعات',true);
     const {data:candidates,error}=await db.from('sales_items').select('id,sale_id,product_id,product_name,quantity,price,sales(invoice_no,created_at)').eq('product_id',product.id).order('id',{ascending:false}).limit(30);
     if(error) return showMessage('تعذر البحث عن مبيعات الصنف: '+error.message,true);
     let chosen=null;
@@ -1196,7 +1228,7 @@
       if(saleError) throw saleError;
 
       const itemsToInsert = cart.map(item => ({
-        sale_id:saleData.id, product_id:item.id, product_name:item.name,
+        sale_id:saleData.id, product_id:item.id, product_name:item.name, product_barcode:item.barcode,
         quantity:item.qty, price:item.default_sale_price,
         total:Number(item.default_sale_price)*Number(item.qty)
       }));
