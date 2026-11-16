@@ -79,23 +79,27 @@
     .login-box { background: #fff; padding: 35px; border-radius: 22px; width: 340px; text-align: center; }
     .login-box input { margin-bottom: 12px; }
     
-    .thermal-receipt { width: 80mm; box-sizing: border-box; margin: 0; padding: 3mm 4mm; font-family: 'Cairo', sans-serif; font-size: 12px; color: #000; background: #fff; text-align: center; }
+    .thermal-receipt { width: 80mm; box-sizing: border-box; margin: 0 auto; padding: 5mm 5mm 6mm; font-family: 'Cairo', sans-serif; font-size: 13px; color: #000; background: #fff; text-align: center; font-weight: 600; }
+    .thermal-receipt .header { text-align:center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+    .thermal-receipt .header h1 { font-size: 32px; line-height: 34px; }
+    .thermal-receipt .header p { font-size: 12px; color:#000; font-weight:700; }
     .thermal-receipt .header h1 { font-family: 'Fredoka', sans-serif; font-size: 28px; margin: 0; font-weight: 800; letter-spacing: 1px; }
     .thermal-receipt .header p { margin: 2px 0; font-size: 11px; color: #555; }
-    .thermal-receipt .inv-info { display: flex; justify-content: space-between; font-size: 11px; margin: 10px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+    .thermal-receipt .inv-info { display: flex; justify-content: space-between; align-items:center; gap:6px; font-size: 12px; margin: 7px 0; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+    .thermal-receipt .inv-info span { white-space:nowrap; }
     
-    .thermal-receipt table { width: 100%; font-size: 12px; margin-top: 10px; margin-bottom: 5px; text-align: right; border-collapse: collapse; }
-    .thermal-receipt table th { border-bottom: 1px solid #000; padding: 5px 0; background: transparent; color: #000; font-weight: bold; }
-    .thermal-receipt table td { padding: 6px 0; border-bottom: 1px dotted #ccc; }
+    .thermal-receipt table { width: 100%; font-size: 13px; margin-top: 12px; margin-bottom: 7px; text-align: right; border-collapse: collapse; }
+    .thermal-receipt table th { border-bottom: 2px solid #000; padding: 7px 0; background: transparent; color: #000; font-weight: bold; }
+    .thermal-receipt table td { padding: 8px 0; border-bottom: 1px dotted #777; font-weight:700; }
     
-    .thermal-receipt .totals { margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; font-size: 14px; }
+    .thermal-receipt .totals { margin-top: 13px; border-top: 2px solid #000; padding-top: 7px; font-size: 15px; }
     .thermal-receipt .totals div { display: flex; justify-content: space-between; margin: 5px 0; }
     .thermal-receipt .totals .grand-total { font-size: 18px; font-weight: bold; margin-top: 8px; }
-    .thermal-receipt .footer { margin-top: 15px; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-    .thermal-receipt .footer img.logo { width: 70px; height: auto; filter: grayscale(100%); margin-bottom: 5px; }
-    .thermal-receipt .footer svg#invoice-bc { margin: 5px auto; display: block; height: 40px !important; width: 80% !important; }
-    .thermal-receipt .footer .qr-container { margin-top: 5px; display:flex; justify-content:center; }
-    .thermal-receipt .footer .qr-container canvas, .thermal-receipt .footer .qr-container img { width: 95px !important; height: 95px !important; display: block; }
+    .thermal-receipt .footer { margin-top: 20px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .thermal-receipt .footer img.logo { width: 115px; height: 48px; object-fit: contain; image-rendering: auto; height: auto; filter: grayscale(100%); margin-bottom: 5px; }
+    .thermal-receipt .footer svg#invoice-bc { margin: 8px auto; display: block; height: 45px !important; width: 92% !important; }
+    .thermal-receipt .footer .qr-container { margin: 10px auto 5px; display:flex; justify-content:center; align-items:center; width:100%; }
+    .thermal-receipt .footer .qr-container canvas, .thermal-receipt .footer .qr-container img { width: 125px !important; height: 125px !important; display: block; }
 
     .barcode-label { width: 50mm; height: 25mm; padding: 1mm 1mm; box-sizing: border-box; text-align: center; margin: 0; background: #fff; color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; overflow: hidden; }
     @page { size: 50mm 25mm; margin: 0; }
@@ -1265,7 +1269,7 @@
     if(!style){ style=document.createElement('style'); style.id='dynamic-print-style'; document.head.appendChild(style); }
     if(mode==='receipt'){
       const itemsCount=Number(arguments[1]||1);
-      const pageHeight=Math.min(250, Math.max(120, 82 + itemsCount*14));
+      const pageHeight=Math.min(320, Math.max(170, 145 + itemsCount*18));
       style.textContent=`@media print { @page { size: 80mm ${pageHeight}mm; margin: 0; } html,body { width:80mm !important; min-width:80mm !important; height:${pageHeight}mm !important; margin:0 !important; padding:0 !important; overflow:visible !important; } #receipt-window { width:80mm !important; min-height:${pageHeight}mm !important; height:auto !important; margin:0 !important; padding:0 !important; } .thermal-receipt { width:80mm !important; max-width:80mm !important; min-height:0 !important; } }`;
     }else{
       style.textContent='@media print { @page { size: 50mm 25mm; margin: 0; } html,body { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; overflow:hidden !important; } #receipt-window { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; } }';
@@ -1350,7 +1354,7 @@
           <div class="grand-total"><span>الإجمالي</span><span>${sale.total} ج.م</span></div>
         </div>
         <div class="footer">
-          <img src="${LOGO_URL}" class="logo" alt="Logo">
+          <img src="${LOGO_URL}" class="logo" alt="TREND">
           <svg id="invoice-bc"></svg>
           <div class="qr-container" id="qr-code-img"></div>
           <p>شكراً لتسوقكم من TREND</p>
@@ -1370,13 +1374,13 @@
     qrDiv.innerHTML = ''; 
     new QRCode(qrDiv, {
         text: WEBSITE_URL,
-        width: 95,
-        height: 95,
+        width: 125,
+        height: 125,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
     });
-    setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; document.body.classList.remove('printing-receipt'); }, 800);
+    setTimeout(()=>{ window.print(); document.getElementById('receipt-window').style.display='none'; document.body.classList.remove('printing-receipt'); }, 1400);
   }
 </script>
 </body>
