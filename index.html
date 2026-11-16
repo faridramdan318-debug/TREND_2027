@@ -336,7 +336,7 @@
                 <h3>📋 سجل المصروفات</h3>
                 <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
                     <table>
-                        <thead><tr><th>#</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th></tr></thead>
+                        <thead><tr><th>#</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead>
                         <tbody id="expenses-table"></tbody>
                     </table>
                 </div>
@@ -1137,10 +1137,18 @@
     loadExpenses();
   }
 
+  async function deleteExpense(id){
+    if(!confirm('حذف هذا المصروف؟ لا يمكن التراجع عن الحذف.')) return;
+    const r=await db.from('expenses').delete().eq('id',id).select('id');
+    if(r.error) return showMessage('لم يتم حذف المصروف: '+r.error.message,true);
+    if(!r.data?.length) return showMessage('لم يتم حذف المصروف، تحقق من صلاحيات Supabase',true);
+    showMessage('تم حذف المصروف'); await loadExpenses(); await loadReports();
+  }
+
   async function loadExpenses(){
     const {data} = await db.from('expenses').select('*').order('id', {ascending:false});
     const tbody = document.getElementById('expenses-table');
-    tbody.innerHTML = (data||[]).map((e,i) => `<tr><td>${i+1}</td><td>${e.name}</td><td>${Number(e.amount).toFixed(2)} ج.م</td><td>${new Date(e.created_at).toLocaleDateString('ar-EG')}</td></tr>`).join('');
+    tbody.innerHTML = (data||[]).map((e,i) => `<tr><td>${i+1}</td><td>${escapeHtml(e.name)}</td><td>${Number(e.amount).toFixed(2)} ج.م</td><td>${new Date(e.created_at).toLocaleDateString('ar-EG')}</td><td><button class="btn" style="padding:4px 8px;background:var(--red)" onclick="requireAdminAuth(()=>deleteExpense(${e.id}))">حذف</button></td></tr>`).join('');
   }
 
   function renderInventoryTable(){
