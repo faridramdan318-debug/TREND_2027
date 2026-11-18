@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <style>
     :root{--ink:#25304a;--muted:#78839d;--cream:#fffaf1;--panel:#fff;--line:#eee8df;--pink:#ff6f91;--purple:#7c5cff;--yellow:#ffc857;--cyan:#47c6d9;--green:#38b889;--red:#ef5b69;--shadow:0 18px 45px rgba(77,55,111,.10)}
@@ -256,7 +257,7 @@
             <h3>📋 آخر فواتير المشتريات</h3>
             <div class="table-wrap" style="max-height:200px; overflow-y:auto;">
                 <table>
-                    <thead><tr><th>رقم الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>التاريخ</th></tr></thead>
+                    <thead><tr><th>رقم الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>التاريخ</th><th>إجراء</th></tr></thead>
                     <tbody id="purchases-table"></tbody>
                 </table>
             </div>
@@ -411,6 +412,11 @@
           <button class="btn" onclick="updateAdminAccount()">حفظ بيانات المدير</button>
         </div>
         
+        <div class="card">
+          <h3>📤 تصدير بيانات النظام</h3>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:12px">ينشئ ملف Excel واحداً يحتوي على كل بيانات النظام في صفحات منفصلة.</p>
+          <button class="btn" onclick="requireAdminAuth(()=>exportAllData())">تصدير كافة البيانات Excel</button>
+        </div>
         <div class="card">
             <h3>🖨️ إعدادات الطباعة</h3>
             <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="98" min="30" max="98"></div>
@@ -649,6 +655,15 @@
       }
   }
 
+  async function printPurchaseInvoice(purchaseId){
+    const pr=await db.from('purchases').select('id,invoice_no,total,created_at,supplier_id,suppliers(name)').eq('id',purchaseId).single();
+    const ir=await db.from('purchase_items').select('product_name,quantity,cost').eq('purchase_id',purchaseId).order('id');
+    if(pr.error||ir.error) return showMessage('تعذر تحميل فاتورة المشتريات',true);
+    const purchase=pr.data;
+    const items=(ir.data||[]).map(i=>({name:i.product_name,qty:Number(i.quantity),default_sale_price:Number(i.cost)}));
+    printReceipt({id:purchase.id,invoice_no:purchase.invoice_no,total:Number(purchase.total||0),payment_method:'purchase',items,isPurchase:true,supplierName:purchase.suppliers?.name||'-'});
+  }
+
   async function loadPurchaseTable() {
       const { data } = await db.from('purchases').select('*, suppliers(name)').order('id', {ascending:false});
       document.getElementById('purchases-table').innerHTML = (data||[]).map(p => `<tr>
@@ -656,6 +671,7 @@
           <td>${p.suppliers?.name || '-'}</td>
           <td>${Number(p.total).toFixed(2)} ج.م</td>
           <td>${new Date(p.created_at).toLocaleDateString('ar-EG')}</td>
+          <td><button class="btn secondary" style="padding:4px 8px" onclick="printPurchaseInvoice(${p.id})">طباعة</button></td>
       </tr>`).join('');
   }
 
@@ -674,36 +690,6 @@
     const u=await db.from('private_products').update({name,purchase_price:purchase,sale_price:sale,quantity}).eq('id',id).select('id').single();
     if(u.error) return showMessage('لم يتم تعديل الصنف: '+u.error.message,true);
     showMessage('تم تعديل الصنف في المخزن المنفصل'); await loadPrivateWarehouse();
-  }
-
-  async function transferPrivateRow(id){
-    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
-    const r=await db.from('private_products').select('*').eq('id',id).single();
-    if(r.error) return showMessage('تعذر تحميل الصنف المنفصل',true);
-    const p=r.data;
-    const qtyInput=prompt(`الكمية المراد ترحيلها من ${p.name} (المتاح ${p.quantity}):`,String(p.quantity)); if(qtyInput===null) return;
-    const qty=Number(qtyInput); if(!Number.isInteger(qty)||qty<=0||qty>Number(p.quantity)) return showMessage('اكتب كمية صحيحة لا تتجاوز المتاح',true);
-    const purchaseInput=prompt('سعر الشراء في المخزن الرئيسي:',String(p.purchase_price)); if(purchaseInput===null) return;
-    const purchase=Number(purchaseInput); if(!Number.isFinite(purchase)||purchase<0) return showMessage('سعر الشراء غير صحيح',true);
-    const saleInput=prompt('سعر البيع في المخزن الرئيسي:',String(p.sale_price)); if(saleInput===null) return;
-    const sale=Number(saleInput); if(!Number.isFinite(sale)||sale<0) return showMessage('سعر البيع غير صحيح',true);
-    try{
-      let main=await db.from('products').select('id').eq('barcode',p.barcode).maybeSingle(); if(main.error) throw main.error;
-      let productId=main.data?.id;
-      if(!productId){
-        const created=await db.from('products').insert([{name:p.name,barcode:p.barcode,default_purchase_price:purchase,default_sale_price:sale}]).select('id').single();
-        if(created.error) throw created.error; productId=created.data.id;
-      }else{
-        const pu=await db.from('products').update({name:p.name,default_purchase_price:purchase,default_sale_price:sale}).eq('id',productId); if(pu.error) throw pu.error;
-      }
-      const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle(); if(stock.error) throw stock.error;
-      if(stock.data){const u=await db.from('product_stock').update({quantity:Number(stock.data.quantity)+qty}).eq('id',stock.data.id);if(u.error)throw u.error;}
-      else {const ins=await db.from('product_stock').insert([{product_id:productId,warehouse_id:defaultWarehouseId,quantity:qty}]);if(ins.error)throw ins.error;}
-      const remaining=Number(p.quantity)-qty;
-      const pv=remaining?await db.from('private_products').update({quantity:remaining,purchase_price:purchase,sale_price:sale}).eq('id',id):await db.from('private_products').delete().eq('id',id);
-      if(pv.error) throw pv.error;
-      showMessage(`تم ترحيل ${qty} من ${p.name} إلى المخزن الرئيسي`); await loadPrivateWarehouse(); await loadProducts();
-    }catch(err){showMessage('لم يتم الترحيل: '+err.message,true);}
   }
 
   async function deletePrivateProduct(id){
@@ -740,59 +726,11 @@
     }catch(err){showMessage('خطأ في حفظ صنف المخزن المنفصل: '+err.message,true);}
   }
 
-  async function previewPrivateTransfer(raw){
-    const input=document.getElementById('private-transfer-barcode');
-    const code=String(raw||'').trim(); if(!code) return;
-    if(input) input.value=code;
-    const key=code.toLowerCase().replace(/[^a-z0-9]/g,'');
-    const r=await db.from('private_products').select('*').order('id',{ascending:false});
-    if(r.error) return showMessage('شغّل ملف فصل المخزن المنفصل أولاً',true);
-    const p=(r.data||[]).find(x=>String(x.barcode||'').toLowerCase().replace(/[^a-z0-9]/g,'')===key);
-    const info=document.getElementById('private-transfer-info');
-    if(!p){ if(info) info.textContent='الباركود غير موجود في المخزن المنفصل'; return showMessage('الباركود غير موجود في المخزن المنفصل',true); }
-    if(info) info.textContent=`${p.name} — المتاح: ${p.quantity} — شراء: ${Number(p.purchase_price).toFixed(2)} — بيع: ${Number(p.sale_price).toFixed(2)}`;
-    const q=document.getElementById('private-transfer-qty'); if(q) { q.max=p.quantity; q.value=Math.min(Number(q.value)||1,Number(p.quantity)); }
-    showMessage('تم العثور على الصنف، راجع الكمية ثم اضغط ترحيل');
-  }
-
-  async function transferPrivateToMain(){
-    const raw=document.getElementById('private-transfer-barcode')?.value||'';
-    const key=raw.toLowerCase().trim().replace(/[^a-z0-9]/g,'');
-    const qty=Number(document.getElementById('private-transfer-qty')?.value)||0;
-    if(!key||qty<=0) return showMessage('امسح باركود الصنف واكتب كمية صحيحة',true);
-    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
-    try{
-      const r=await db.from('private_products').select('*').order('id',{ascending:false}); if(r.error) throw r.error;
-      const p=(r.data||[]).find(x=>String(x.barcode||'').toLowerCase().replace(/[^a-z0-9]/g,'')===key);
-      if(!p) return showMessage('الباركود غير موجود في المخزن المنفصل',true);
-      if(qty>Number(p.quantity)) return showMessage('الكمية المطلوبة أكبر من المتاح في المخزن المنفصل',true);
-      let main=await db.from('products').select('id').eq('barcode',p.barcode).maybeSingle();
-      if(main.error) throw main.error;
-      let productId=main.data?.id;
-      if(!productId){
-        const created=await db.from('products').insert([{name:p.name,barcode:p.barcode,default_purchase_price:p.purchase_price,default_sale_price:p.sale_price}]).select('id').single();
-        if(created.error) throw created.error;
-        productId=created.data.id;
-      }else{
-        const updated=await db.from('products').update({name:p.name,default_purchase_price:p.purchase_price,default_sale_price:p.sale_price}).eq('id',productId); if(updated.error) throw updated.error;
-      }
-      const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle(); if(stock.error) throw stock.error;
-      if(stock.data){const u=await db.from('product_stock').update({quantity:Number(stock.data.quantity)+qty}).eq('id',stock.data.id);if(u.error)throw u.error;}
-      else {const ins=await db.from('product_stock').insert([{product_id:productId,warehouse_id:defaultWarehouseId,quantity:qty}]);if(ins.error)throw ins.error;}
-      const remaining=Number(p.quantity)-qty;
-      const pu=remaining?await db.from('private_products').update({quantity:remaining}).eq('id',p.id):await db.from('private_products').delete().eq('id',p.id);
-      if(pu.error) throw pu.error;
-      showMessage(`تم ترحيل ${qty} من ${p.name} إلى المخزن الرئيسي`);
-      document.getElementById('private-transfer-barcode').value=''; document.getElementById('private-transfer-qty').value='1'; document.getElementById('private-transfer-info').textContent='';
-      await loadPrivateWarehouse(); await loadProducts();
-    }catch(err){showMessage('لم يتم الترحيل: '+err.message,true);}
-  }
-
   async function loadPrivateWarehouse(){
     const r=await db.from('private_products').select('*').order('id',{ascending:false});
     const tbody=document.getElementById('private-table');
     if(r.error){tbody.innerHTML='<tr><td colspan="6">شغّل ملف فصل المخزن المنفصل أولاً</td></tr>';return;}
-    tbody.innerHTML=(r.data||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${Number(p.purchase_price).toFixed(2)}</td><td>${Number(p.sale_price).toFixed(2)}</td><td>${p.quantity}</td><td><button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>editPrivateProduct(${p.id}))">تعديل</button> <button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>transferPrivateRow(${p.id}))">ترحيل للرئيسي</button> <button class="btn" style="padding:4px 7px;background:var(--red)" onclick="requireAdminAuth(()=>deletePrivateProduct(${p.id}))">حذف</button></td></tr>`).join('');
+    tbody.innerHTML=(r.data||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${Number(p.purchase_price).toFixed(2)}</td><td>${Number(p.sale_price).toFixed(2)}</td><td>${p.quantity}</td><td><button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>editPrivateProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:4px 7px;background:var(--red)" onclick="requireAdminAuth(()=>deletePrivateProduct(${p.id}))">حذف</button></td></tr>`).join('');
   }
 
   // --- العملاء والحسابات الآجلة ---
@@ -1141,6 +1079,25 @@
   }
 
   // --- التقارير ---
+  async function searchInvoice(){
+    const number=document.getElementById('search-invoice-num')?.value.trim();
+    if(!number) return showMessage('اكتب رقم الفاتورة أولاً',true);
+    const sale=await db.from('sales').select('id,invoice_no,total,created_at,payment_method').eq('invoice_no',number).maybeSingle();
+    if(sale.error) return showMessage('تعذر البحث عن الفاتورة',true);
+    let header=sale.data, type='sale';
+    if(!header){
+      const purchase=await db.from('purchases').select('id,invoice_no,total,created_at').eq('invoice_no',number).maybeSingle();
+      if(purchase.error) return showMessage('تعذر البحث عن الفاتورة',true);
+      header=purchase.data; type='purchase';
+    }
+    if(!header) return showMessage('الفاتورة غير موجودة',true);
+    const itemsResult=type==='sale' ? await db.from('sales_items').select('product_name,quantity,price').eq('sale_id',header.id).order('id') : await db.from('purchase_items').select('product_name,quantity,cost').eq('purchase_id',header.id).order('id');
+    if(itemsResult.error) return showMessage('تعذر تحميل تفاصيل الفاتورة',true);
+    document.getElementById('invoice-details').style.display='block';
+    document.getElementById('inv-num-display').textContent=header.invoice_no+(type==='purchase'?' — مشتريات':' — بيع');
+    document.getElementById('invoice-items-table').innerHTML=(itemsResult.data||[]).map(i=>{const price=Number(type==='sale'?i.price:i.cost||0),qty=Number(i.quantity||0);return `<tr><td>${escapeHtml(i.product_name||'-')}</td><td>${qty}</td><td>${price.toFixed(2)} ج.م</td><td>${(qty*price).toFixed(2)} ج.م</td><td>${type==='sale'?`<button class="btn secondary" style="padding:3px 6px" onclick="viewCustomerInvoice(${header.id})">طباعة</button>`:'-'}</td></tr>`;}).join('')||'<tr><td colspan="5">لا توجد تفاصيل</td></tr>';
+  }
+
   async function loadReports() {
       let fromDate = document.getElementById('rep-from').value;
       let toDate = document.getElementById('rep-to').value;
@@ -1382,6 +1339,29 @@
     document.getElementById('employees-table').innerHTML = (data||[]).map((u,i)=>`<tr><td>${i+1}</td><td>${u.username}</td><td>${u.role}</td><td>${u.username==='amr'?'-':`<button class="btn" onclick="db.from('users').delete().eq('id',${u.id}).then(()=>loadEmployees())">حذف</button>`}</td></tr>`).join('');
   }
 
+  async function exportAllData(){
+    if(typeof XLSX==='undefined') return showMessage('مكتبة Excel لم تُحمّل، أعد تحديث الصفحة',true);
+    showMessage('جاري تجهيز ملف Excel...');
+    const tables=[
+      ['products','المنتجات'],['product_stock','المخزون'],['warehouses','المخازن'],
+      ['sales','المبيعات'],['sales_items','تفاصيل المبيعات'],['sales_returns','المرتجعات'],['sales_return_items','تفاصيل المرتجعات'],
+      ['purchases','المشتريات'],['purchase_items','تفاصيل المشتريات'],['suppliers','الموردون'],
+      ['customers','العملاء'],['customer_payments','دفعات العملاء'],['expenses','المصروفات'],['private_products','المخزن المنفصل'],['users','المستخدمون']
+    ];
+    const wb=XLSX.utils.book_new(); let exported=0;
+    for(const [table,sheetName] of tables){
+      const result=await db.from(table).select('*');
+      if(result.error){ console.warn('Export skipped',table,result.error.message); continue; }
+      const rows=result.data||[];
+      const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{ملاحظة:'لا توجد بيانات'}]);
+      XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31)); exported++;
+    }
+    if(!exported) return showMessage('لم يتم العثور على بيانات قابلة للتصدير',true);
+    const stamp=new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb,`TREND_backup_${stamp}.xlsx`);
+    showMessage('تم تصدير كافة البيانات إلى ملف Excel');
+  }
+
   function saveBarcodeSettings() {
       bcScale = Math.max(30, Math.min(98, parseFloat(document.getElementById('barcode_scale').value) || 98));
       bcWidth = Math.max(0.2, Math.min(2, parseFloat(document.getElementById('barcode_width').value) || 0.8));
@@ -1411,7 +1391,6 @@
   let barcodeTimer=null;
 
   function isPOSActive(){ return document.getElementById('page-pos')?.classList.contains('active'); }
-  function isStorageActive(){ return document.getElementById('page-storage')?.classList.contains('active'); }
 
   function scanBarcodeFromSearch(){
     const input=document.getElementById('pos-search');
@@ -1452,7 +1431,7 @@
   }
 
   function handleGlobalBarcodeKey(event){
-    if(!isPOSActive() && !isReturnsActive() && !isStorageActive()) return;
+    if(!isPOSActive() && !isReturnsActive()) return;
     // Most USB scanners send characters rapidly and finish with Enter.
     if(event.key==='Enter'){
       if(barcodeBuffer.length>=2){
@@ -1460,7 +1439,7 @@
         const code=barcodeBuffer;
         barcodeBuffer='';
         clearTimeout(barcodeTimer);
-        if(document.getElementById('page-returns')?.classList.contains('active')) addReturnByBarcode(code); else if(document.getElementById('page-pos')?.classList.contains('active')) addProductByBarcode(code); else if(document.getElementById('page-storage')?.classList.contains('active')) previewPrivateTransfer(code);
+        if(document.getElementById('page-returns')?.classList.contains('active')) addReturnByBarcode(code); else if(document.getElementById('page-pos')?.classList.contains('active')) addProductByBarcode(code);
       }
       return;
     }
@@ -1607,7 +1586,7 @@
       </tr>
     `).join('');
     
-    let payMethodAr = sale.payment_method === 'cash' ? 'كاش' : (sale.payment_method === 'instapay' ? 'إنستا باي' : (sale.payment_method === 'wallet' ? 'محفظة إلكترونية' : 'آجل'));
+    let payMethodAr = sale.isPurchase ? 'مشتريات' : (sale.payment_method === 'cash' ? 'كاش' : (sale.payment_method === 'instapay' ? 'إنستا باي' : (sale.payment_method === 'wallet' ? 'محفظة إلكترونية' : 'آجل')));
 
     let html = `
       <div class="thermal-receipt" dir="rtl">
@@ -1624,7 +1603,7 @@
           <span>الكاشير: ${currentUserRole==='admin'?'المدير':'كاشير'}</span>
         </div>
         <div class="inv-info" style="border:none; padding:0;">
-          <span>طريقة الدفع: ${payMethodAr}</span>
+          <span>${sale.isPurchase ? `المورد: ${sale.supplierName||'-'}` : `طريقة الدفع: ${payMethodAr}`}</span>
         </div>
         <table style="width:100%; border-collapse:collapse; margin-top:10px;">
           <thead>
