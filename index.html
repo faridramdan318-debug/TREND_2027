@@ -210,7 +210,7 @@
                 <h3>📋 محتويات المخزن المنفصل</h3>
                 <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
                     <table>
-                        <thead><tr><th>#</th><th>الاسم</th><th>شراء</th><th>بيع</th><th>الكمية</th></tr></thead>
+                        <thead><tr><th>#</th><th>الاسم</th><th>شراء</th><th>بيع</th><th>الكمية</th><th>إجراءات</th></tr></thead>
                         <tbody id="private-table"></tbody>
                     </table>
                 </div>
@@ -508,8 +508,13 @@
       wh=created.data;
     }
     defaultWarehouseId=wh.id;
-    const {data:privWh} = await db.from('warehouses').select('*').in('code',['PRIVATE-01','PRIVATE']).order('id',{ascending:true}).limit(1).maybeSingle();
-    if(privWh) privateWarehouseId=privWh.id;
+    let {data:privWh} = await db.from('warehouses').select('*').in('code',['PRIVATE-01','PRIVATE']).order('id',{ascending:true}).limit(1).maybeSingle();
+    if(!privWh){
+      const createdPrivate=await db.from('warehouses').insert([{name:'المخزن المنفصل',code:'PRIVATE',is_active:true}]).select().single();
+      if(createdPrivate.error) return showMessage('تعذر إنشاء المخزن المنفصل: '+createdPrivate.error.message,true);
+      privWh=createdPrivate.data;
+    }
+    privateWarehouseId=privWh.id;
     await loadProducts();
   }
   
@@ -650,40 +655,61 @@
   }
 
   // --- المصروفات والمخزن المنفصل (كما هي) ---
+  async function editPrivateProduct(id){
+    const r=await db.from('private_products').select('*').eq('id',id).single();
+    if(r.error) return showMessage('شغّل ملف فصل المخزن المنفصل أولاً',true);
+    const nameInput=prompt('اسم الصنف:',r.data.name); if(nameInput===null) return;
+    const name=nameInput.trim(); if(!name) return showMessage('اسم الصنف لا يمكن أن يكون فارغاً',true);
+    const purchaseInput=prompt('سعر الشراء:',r.data.purchase_price); if(purchaseInput===null) return;
+    const purchase=Number(purchaseInput); if(!Number.isFinite(purchase)||purchase<0) return showMessage('سعر الشراء غير صحيح',true);
+    const saleInput=prompt('سعر البيع:',r.data.sale_price); if(saleInput===null) return;
+    const sale=Number(saleInput); if(!Number.isFinite(sale)||sale<0) return showMessage('سعر البيع غير صحيح',true);
+    const qtyInput=prompt('الكمية:',r.data.quantity); if(qtyInput===null) return;
+    const quantity=Number(qtyInput); if(!Number.isInteger(quantity)||quantity<0) return showMessage('الكمية يجب أن تكون رقماً صحيحاً غير سالب',true);
+    const u=await db.from('private_products').update({name,purchase_price:purchase,sale_price:sale,quantity}).eq('id',id).select('id').single();
+    if(u.error) return showMessage('لم يتم تعديل الصنف: '+u.error.message,true);
+    showMessage('تم تعديل الصنف في المخزن المنفصل'); await loadPrivateWarehouse();
+  }
+
+  async function deletePrivateProduct(id){
+    if(!confirm('حذف الصنف من المخزن المنفصل؟ لن يتأثر المخزن الرئيسي.')) return;
+    const r=await db.from('private_products').delete().eq('id',id).select('id');
+    if(r.error) return showMessage('لم يتم حذف الصنف: '+r.error.message,true);
+    if(!r.data?.length) return showMessage('لم يتم حذف الصنف، تحقق من صلاحيات Supabase',true);
+    showMessage('تم حذف الصنف من المخزن المنفصل'); await loadPrivateWarehouse();
+  }
+
+  async function generatePrivateBarcode(){
+    for(let attempt=0;attempt<30;attempt++){
+      const code='PR-'+String(Math.floor(100+Math.random()*900));
+      const r=await db.from('private_products').select('id').eq('barcode',code).maybeSingle();
+      if(!r.error && !r.data) return code;
+    }
+    throw new Error('تعذر توليد باركود للمخزن المنفصل');
+  }
+
   async function addPrivateProduct(){
-    const name = document.getElementById('s_name').value.trim();
-    const purchase = parseFloat(document.getElementById('s_purchase').value)||0;
-    const sale = parseFloat(document.getElementById('s_sale').value)||0;
-    const qty = parseInt(document.getElementById('s_qty').value)||1;
-
-    if(!name) return showMessage('اكتب اسم الصنف', true);
-    if(!privateWarehouseId) return showMessage('خطأ في إعداد المخزن المنفصل', true);
-
-    const barcode = await generateShortBarcode();
-
-    const {data:p, error} = await db.from('products').insert([{name, barcode, default_purchase_price: purchase, default_sale_price: sale}]).select().single();
-    if(error) return showMessage('خطأ: '+error.message, true);
-
-    await db.from('product_stock').insert([{product_id: p.id, warehouse_id: privateWarehouseId, quantity: qty}]);
-
-    showMessage('تم الإضافة للمخزن المنفصل بنجاح!');
-    document.getElementById('s_name').value = '';
-    document.getElementById('s_purchase').value = '0';
-    document.getElementById('s_sale').value = '0';
-    document.getElementById('s_qty').value = '1';
-    loadPrivateWarehouse();
+    const name=document.getElementById('s_name').value.trim();
+    const purchase=Number(document.getElementById('s_purchase').value)||0;
+    const sale=Number(document.getElementById('s_sale').value)||0;
+    const qty=Number(document.getElementById('s_qty').value)||0;
+    if(!name) return showMessage('اكتب اسم الصنف',true);
+    if(!Number.isInteger(qty)||qty<0) return showMessage('الكمية يجب أن تكون رقماً صحيحاً غير سالب',true);
+    try{
+      const barcode=await generatePrivateBarcode();
+      const r=await db.from('private_products').insert([{name,barcode,purchase_price:purchase,sale_price:sale,quantity:qty}]).select().single();
+      if(r.error) throw r.error;
+      showMessage('تمت الإضافة للمخزن المنفصل المستقل');
+      document.getElementById('s_name').value=''; document.getElementById('s_purchase').value='0'; document.getElementById('s_sale').value='0'; document.getElementById('s_qty').value='1';
+      await loadPrivateWarehouse();
+    }catch(err){showMessage('خطأ في حفظ صنف المخزن المنفصل: '+err.message,true);}
   }
 
   async function loadPrivateWarehouse(){
-    if(!privateWarehouseId) return;
-    const {data:stock} = await db.from('product_stock').select('*').eq('warehouse_id', privateWarehouseId);
-    const {data:prods} = await db.from('products').select('*');
-    const allP = prods || [];
-    const tbody = document.getElementById('private-table');
-    tbody.innerHTML = (stock||[]).map((s,i)=>{
-      const p = allP.find(x=>x.id===s.product_id);
-      return `<tr><td>${i+1}</td><td>${p?p.name:'-'}</td><td>${p?p.default_purchase_price:'0'}</td><td>${p?p.default_sale_price:'0'}</td><td>${s.quantity}</td></tr>`;
-    }).join('');
+    const r=await db.from('private_products').select('*').order('id',{ascending:false});
+    const tbody=document.getElementById('private-table');
+    if(r.error){tbody.innerHTML='<tr><td colspan="6">شغّل ملف فصل المخزن المنفصل أولاً</td></tr>';return;}
+    tbody.innerHTML=(r.data||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${Number(p.purchase_price).toFixed(2)}</td><td>${Number(p.sale_price).toFixed(2)}</td><td>${p.quantity}</td><td><button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>editPrivateProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:4px 7px;background:var(--red)" onclick="requireAdminAuth(()=>deletePrivateProduct(${p.id}))">حذف</button></td></tr>`).join('');
   }
 
   // --- العملاء والحسابات الآجلة ---
