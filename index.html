@@ -239,7 +239,7 @@
                     <!-- حقول الأصناف هتتضاف هنا -->
                 </div>
                 <button class="btn secondary full" onclick="addPurchaseItemRow()" style="margin-bottom:10px;">+ إضافة صنف للفاتورة</button>
-                <button class="btn full" onclick="savePurchaseInvoice()">حفظ الفاتورة بالكامل</button>
+                <div class="total" style="margin:12px 0"><span>مجمل فاتورة المشتريات</span><strong id="purchase-total">0.00 ج.م</strong></div><button class="btn full" onclick="savePurchaseInvoice()">حفظ الفاتورة بالكامل</button>
             </div>
         </div>
         
@@ -560,12 +560,19 @@
       row.innerHTML = `
           <input type="text" placeholder="اسم الصنف" class="pi-name">
           <input type="text" placeholder="الكود" class="pi-code">
-          <input type="number" placeholder="شراء" class="pi-cost" value="0">
+          <input type="number" placeholder="شراء" class="pi-cost" value="0" oninput="updatePurchaseTotal()">
           <input type="number" placeholder="بيع" class="pi-sale" value="0">
-          <input type="number" placeholder="كمية" class="pi-qty" value="1">
-          <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">✖</button>
+          <input type="number" placeholder="كمية" class="pi-qty" value="1" oninput="updatePurchaseTotal()">
+          <button type="button" onclick="this.parentElement.remove();updatePurchaseTotal()" style="background:none; border:none; color:red; cursor:pointer;">✖</button>
       `;
       container.appendChild(row);
+      updatePurchaseTotal();
+  }
+
+  function updatePurchaseTotal(){
+    let total=0;
+    document.querySelectorAll('.pur-item-row').forEach(row=>{ total+=(Number(row.querySelector('.pi-cost')?.value)||0)*(Number(row.querySelector('.pi-qty')?.value)||0); });
+    const el=document.getElementById('purchase-total'); if(el) el.textContent=total.toFixed(2)+' ج.م';
   }
 
   async function savePurchaseInvoice() {
@@ -604,38 +611,36 @@
           }]).select().single();
           if(pError) throw pError;
 
-          // 2. إدخال الأصناف للمخزن
-          for (let item of itemsToInsert) {
-              // إضافة المنتج
-              const {data: prodData, error: prodError} = await db.from('products').insert([{
-                  name: item.name, 
-                  barcode: item.code, 
-                  default_purchase_price: item.cost, 
-                  default_sale_price: item.sale
-              }]).select().single();
-              if(prodError) throw prodError;
-
-              // إضافة الرصيد للمخزن
-              const stockResult=await db.from('product_stock').insert([{
-                  product_id: prodData.id,
-                  warehouse_id: defaultWarehouseId,
-                  quantity: item.qty
-              }]);
-              if(stockResult.error) throw stockResult.error;
-
-              // تسجيل الصنف في تفاصيل الفاتورة
-              await db.from('purchase_items').insert([{
-                  purchase_id: pData.id,
-                  product_id: prodData.id,
-                  product_name: item.name,
-                  quantity: item.qty,
-                  cost: item.cost
-              }]);
+          // 2. إدخال الأصناف للمخزن الرئيسي بنفس الباركود بدون تكرار المنتج.
+          for (const item of itemsToInsert) {
+              let productResult=await db.from('products').select('id,name,barcode').eq('barcode',item.code).maybeSingle();
+              if(productResult.error) throw productResult.error;
+              let productId=productResult.data?.id;
+              if(productId){
+                  const updated=await db.from('products').update({name:item.name,default_purchase_price:item.cost,default_sale_price:item.sale}).eq('id',productId);
+                  if(updated.error) throw updated.error;
+              }else{
+                  const created=await db.from('products').insert([{name:item.name,barcode:item.code,default_purchase_price:item.cost,default_sale_price:item.sale}]).select('id').single();
+                  if(created.error) throw created.error;
+                  productId=created.data.id;
+              }
+              const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle();
+              if(stock.error) throw stock.error;
+              if(stock.data){
+                  const updatedStock=await db.from('product_stock').update({quantity:Number(stock.data.quantity)+item.qty}).eq('id',stock.data.id);
+                  if(updatedStock.error) throw updatedStock.error;
+              }else{
+                  const newStock=await db.from('product_stock').insert([{product_id:productId,warehouse_id:defaultWarehouseId,quantity:item.qty}]);
+                  if(newStock.error) throw newStock.error;
+              }
+              const detail=await db.from('purchase_items').insert([{purchase_id:pData.id,product_id:productId,product_name:item.name,quantity:item.qty,cost:item.cost}]);
+              if(detail.error) throw detail.error;
           }
 
           showMessage('تم حفظ الفاتورة وإدخال البضاعة للمخزن!');
           document.getElementById('pur-items-container').innerHTML = '';
           document.getElementById('pur-invoice-no').value = '';
+          updatePurchaseTotal();
           
           loadProducts();
           loadPurchaseTable();
