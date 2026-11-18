@@ -671,6 +671,36 @@
     showMessage('تم تعديل الصنف في المخزن المنفصل'); await loadPrivateWarehouse();
   }
 
+  async function transferPrivateRow(id){
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    const r=await db.from('private_products').select('*').eq('id',id).single();
+    if(r.error) return showMessage('تعذر تحميل الصنف المنفصل',true);
+    const p=r.data;
+    const qtyInput=prompt(`الكمية المراد ترحيلها من ${p.name} (المتاح ${p.quantity}):`,String(p.quantity)); if(qtyInput===null) return;
+    const qty=Number(qtyInput); if(!Number.isInteger(qty)||qty<=0||qty>Number(p.quantity)) return showMessage('اكتب كمية صحيحة لا تتجاوز المتاح',true);
+    const purchaseInput=prompt('سعر الشراء في المخزن الرئيسي:',String(p.purchase_price)); if(purchaseInput===null) return;
+    const purchase=Number(purchaseInput); if(!Number.isFinite(purchase)||purchase<0) return showMessage('سعر الشراء غير صحيح',true);
+    const saleInput=prompt('سعر البيع في المخزن الرئيسي:',String(p.sale_price)); if(saleInput===null) return;
+    const sale=Number(saleInput); if(!Number.isFinite(sale)||sale<0) return showMessage('سعر البيع غير صحيح',true);
+    try{
+      let main=await db.from('products').select('id').eq('barcode',p.barcode).maybeSingle(); if(main.error) throw main.error;
+      let productId=main.data?.id;
+      if(!productId){
+        const created=await db.from('products').insert([{name:p.name,barcode:p.barcode,default_purchase_price:purchase,default_sale_price:sale}]).select('id').single();
+        if(created.error) throw created.error; productId=created.data.id;
+      }else{
+        const pu=await db.from('products').update({name:p.name,default_purchase_price:purchase,default_sale_price:sale}).eq('id',productId); if(pu.error) throw pu.error;
+      }
+      const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle(); if(stock.error) throw stock.error;
+      if(stock.data){const u=await db.from('product_stock').update({quantity:Number(stock.data.quantity)+qty}).eq('id',stock.data.id);if(u.error)throw u.error;}
+      else {const ins=await db.from('product_stock').insert([{product_id:productId,warehouse_id:defaultWarehouseId,quantity:qty}]);if(ins.error)throw ins.error;}
+      const remaining=Number(p.quantity)-qty;
+      const pv=remaining?await db.from('private_products').update({quantity:remaining,purchase_price:purchase,sale_price:sale}).eq('id',id):await db.from('private_products').delete().eq('id',id);
+      if(pv.error) throw pv.error;
+      showMessage(`تم ترحيل ${qty} من ${p.name} إلى المخزن الرئيسي`); await loadPrivateWarehouse(); await loadProducts();
+    }catch(err){showMessage('لم يتم الترحيل: '+err.message,true);}
+  }
+
   async function deletePrivateProduct(id){
     if(!confirm('حذف الصنف من المخزن المنفصل؟ لن يتأثر المخزن الرئيسي.')) return;
     const r=await db.from('private_products').delete().eq('id',id).select('id');
@@ -705,11 +735,59 @@
     }catch(err){showMessage('خطأ في حفظ صنف المخزن المنفصل: '+err.message,true);}
   }
 
+  async function previewPrivateTransfer(raw){
+    const input=document.getElementById('private-transfer-barcode');
+    const code=String(raw||'').trim(); if(!code) return;
+    if(input) input.value=code;
+    const key=code.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const r=await db.from('private_products').select('*').order('id',{ascending:false});
+    if(r.error) return showMessage('شغّل ملف فصل المخزن المنفصل أولاً',true);
+    const p=(r.data||[]).find(x=>String(x.barcode||'').toLowerCase().replace(/[^a-z0-9]/g,'')===key);
+    const info=document.getElementById('private-transfer-info');
+    if(!p){ if(info) info.textContent='الباركود غير موجود في المخزن المنفصل'; return showMessage('الباركود غير موجود في المخزن المنفصل',true); }
+    if(info) info.textContent=`${p.name} — المتاح: ${p.quantity} — شراء: ${Number(p.purchase_price).toFixed(2)} — بيع: ${Number(p.sale_price).toFixed(2)}`;
+    const q=document.getElementById('private-transfer-qty'); if(q) { q.max=p.quantity; q.value=Math.min(Number(q.value)||1,Number(p.quantity)); }
+    showMessage('تم العثور على الصنف، راجع الكمية ثم اضغط ترحيل');
+  }
+
+  async function transferPrivateToMain(){
+    const raw=document.getElementById('private-transfer-barcode')?.value||'';
+    const key=raw.toLowerCase().trim().replace(/[^a-z0-9]/g,'');
+    const qty=Number(document.getElementById('private-transfer-qty')?.value)||0;
+    if(!key||qty<=0) return showMessage('امسح باركود الصنف واكتب كمية صحيحة',true);
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    try{
+      const r=await db.from('private_products').select('*').order('id',{ascending:false}); if(r.error) throw r.error;
+      const p=(r.data||[]).find(x=>String(x.barcode||'').toLowerCase().replace(/[^a-z0-9]/g,'')===key);
+      if(!p) return showMessage('الباركود غير موجود في المخزن المنفصل',true);
+      if(qty>Number(p.quantity)) return showMessage('الكمية المطلوبة أكبر من المتاح في المخزن المنفصل',true);
+      let main=await db.from('products').select('id').eq('barcode',p.barcode).maybeSingle();
+      if(main.error) throw main.error;
+      let productId=main.data?.id;
+      if(!productId){
+        const created=await db.from('products').insert([{name:p.name,barcode:p.barcode,default_purchase_price:p.purchase_price,default_sale_price:p.sale_price}]).select('id').single();
+        if(created.error) throw created.error;
+        productId=created.data.id;
+      }else{
+        const updated=await db.from('products').update({name:p.name,default_purchase_price:p.purchase_price,default_sale_price:p.sale_price}).eq('id',productId); if(updated.error) throw updated.error;
+      }
+      const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle(); if(stock.error) throw stock.error;
+      if(stock.data){const u=await db.from('product_stock').update({quantity:Number(stock.data.quantity)+qty}).eq('id',stock.data.id);if(u.error)throw u.error;}
+      else {const ins=await db.from('product_stock').insert([{product_id:productId,warehouse_id:defaultWarehouseId,quantity:qty}]);if(ins.error)throw ins.error;}
+      const remaining=Number(p.quantity)-qty;
+      const pu=remaining?await db.from('private_products').update({quantity:remaining}).eq('id',p.id):await db.from('private_products').delete().eq('id',p.id);
+      if(pu.error) throw pu.error;
+      showMessage(`تم ترحيل ${qty} من ${p.name} إلى المخزن الرئيسي`);
+      document.getElementById('private-transfer-barcode').value=''; document.getElementById('private-transfer-qty').value='1'; document.getElementById('private-transfer-info').textContent='';
+      await loadPrivateWarehouse(); await loadProducts();
+    }catch(err){showMessage('لم يتم الترحيل: '+err.message,true);}
+  }
+
   async function loadPrivateWarehouse(){
     const r=await db.from('private_products').select('*').order('id',{ascending:false});
     const tbody=document.getElementById('private-table');
     if(r.error){tbody.innerHTML='<tr><td colspan="6">شغّل ملف فصل المخزن المنفصل أولاً</td></tr>';return;}
-    tbody.innerHTML=(r.data||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${Number(p.purchase_price).toFixed(2)}</td><td>${Number(p.sale_price).toFixed(2)}</td><td>${p.quantity}</td><td><button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>editPrivateProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:4px 7px;background:var(--red)" onclick="requireAdminAuth(()=>deletePrivateProduct(${p.id}))">حذف</button></td></tr>`).join('');
+    tbody.innerHTML=(r.data||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${Number(p.purchase_price).toFixed(2)}</td><td>${Number(p.sale_price).toFixed(2)}</td><td>${p.quantity}</td><td><button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>editPrivateProduct(${p.id}))">تعديل</button> <button class="btn secondary" style="padding:4px 7px" onclick="requireAdminAuth(()=>transferPrivateRow(${p.id}))">ترحيل للرئيسي</button> <button class="btn" style="padding:4px 7px;background:var(--red)" onclick="requireAdminAuth(()=>deletePrivateProduct(${p.id}))">حذف</button></td></tr>`).join('');
   }
 
   // --- العملاء والحسابات الآجلة ---
@@ -1181,8 +1259,34 @@
     const body=document.getElementById('inventory-table');
     body.innerHTML = allProducts.filter(p=>Object.prototype.hasOwnProperty.call(stockByProduct,p.id)).map((p,i)=>{
       const stock = stockByProduct[p.id] || 0;
-      return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabelById(${p.id})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button></td></tr>`;
+      return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabelById(${p.id})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>transferMainToPrivate(${p.id}))">تحويل للمنفصل</button></td></tr>`;
     }).join('');
+  }
+
+  async function transferMainToPrivate(productId){
+    const p=allProducts.find(x=>x.id===productId); if(!p) return showMessage('الصنف غير موجود',true);
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    const current=Number(stockByProduct[productId]||0);
+    const qtyInput=prompt(`الكمية المراد تحويلها (المتاح ${current}):`,String(Math.max(1,Math.min(current,1)))); if(qtyInput===null) return;
+    const qty=Number(qtyInput); if(!Number.isInteger(qty)||qty<=0||qty>current) return showMessage('اكتب كمية صحيحة لا تتجاوز المتاح',true);
+    const purchaseInput=prompt('سعر الشراء في المخزن المنفصل:',String(p.default_purchase_price||0)); if(purchaseInput===null) return;
+    const purchase=Number(purchaseInput); if(!Number.isFinite(purchase)||purchase<0) return showMessage('سعر الشراء غير صحيح',true);
+    const saleInput=prompt('سعر البيع في المخزن المنفصل:',String(p.default_sale_price||0)); if(saleInput===null) return;
+    const sale=Number(saleInput); if(!Number.isFinite(sale)||sale<0) return showMessage('سعر البيع غير صحيح',true);
+    try{
+      const existing=await db.from('private_products').select('id,quantity').eq('barcode',p.barcode).maybeSingle(); if(existing.error) throw existing.error;
+      if(existing.data){
+        const u=await db.from('private_products').update({name:p.name,purchase_price:purchase,sale_price:sale,quantity:Number(existing.data.quantity)+qty}).eq('id',existing.data.id).select('id').single();
+        if(u.error) throw u.error;
+      }else{
+        const ins=await db.from('private_products').insert([{name:p.name,barcode:p.barcode,purchase_price:purchase,sale_price:sale,quantity:qty}]).select('id').single();
+        if(ins.error) throw ins.error;
+      }
+      const stock=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',productId).maybeSingle(); if(stock.error) throw stock.error;
+      if(!stock.data||Number(stock.data.quantity)<qty) throw new Error('الكمية غير متاحة في المخزن الرئيسي');
+      const update=await db.from('product_stock').update({quantity:Number(stock.data.quantity)-qty}).eq('id',stock.data.id).select('id').single(); if(update.error) throw update.error;
+      showMessage(`تم تحويل ${qty} من ${p.name} إلى المخزن المنفصل`); await loadProducts(); await loadPrivateWarehouse();
+    }catch(err){showMessage('لم يتم التحويل: '+err.message,true);}
   }
 
   function printLabelById(id){
@@ -1302,6 +1406,7 @@
   let barcodeTimer=null;
 
   function isPOSActive(){ return document.getElementById('page-pos')?.classList.contains('active'); }
+  function isStorageActive(){ return document.getElementById('page-storage')?.classList.contains('active'); }
 
   function scanBarcodeFromSearch(){
     const input=document.getElementById('pos-search');
@@ -1342,7 +1447,7 @@
   }
 
   function handleGlobalBarcodeKey(event){
-    if(!isPOSActive() && !isReturnsActive()) return;
+    if(!isPOSActive() && !isReturnsActive() && !isStorageActive()) return;
     // Most USB scanners send characters rapidly and finish with Enter.
     if(event.key==='Enter'){
       if(barcodeBuffer.length>=2){
@@ -1350,7 +1455,7 @@
         const code=barcodeBuffer;
         barcodeBuffer='';
         clearTimeout(barcodeTimer);
-        if(document.getElementById('page-returns')?.classList.contains('active')) addReturnByBarcode(code); else if(document.getElementById('page-pos')?.classList.contains('active')) addProductByBarcode(code);
+        if(document.getElementById('page-returns')?.classList.contains('active')) addReturnByBarcode(code); else if(document.getElementById('page-pos')?.classList.contains('active')) addProductByBarcode(code); else if(document.getElementById('page-storage')?.classList.contains('active')) previewPrivateTransfer(code);
       }
       return;
     }
