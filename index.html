@@ -669,6 +669,51 @@
     printReceipt({id:purchase.id,invoice_no:purchase.invoice_no,total:Number(purchase.total||0),payment_method:'purchase',items,isPurchase:true,supplierName:purchase.suppliers?.name||'-'});
   }
 
+  async function deletePurchaseInvoice(purchaseId){
+    if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
+    if(!confirm('حذف فاتورة المشتريات وخصم كمياتها من المخزن؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    try{
+      const purchaseResult=await db.from('purchases').select('id,invoice_no').eq('id',purchaseId).single();
+      if(purchaseResult.error) throw purchaseResult.error;
+      const itemsResult=await db.from('purchase_items').select('id,product_id,quantity,product_name').eq('purchase_id',purchaseId).order('id');
+      if(itemsResult.error) throw itemsResult.error;
+      const items=itemsResult.data||[];
+
+      // نتحقق من كل الأرصدة أولاً حتى لا يصبح المخزون بالسالب.
+      const quantitiesByProduct=new Map();
+      const namesByProduct=new Map();
+      for(const item of items){
+        const productKey=String(item.product_id);
+        quantitiesByProduct.set(productKey,(quantitiesByProduct.get(productKey)||0)+Number(item.quantity||0));
+        namesByProduct.set(productKey,item.product_name||'-');
+      }
+      const stockChanges=[];
+      for(const [productKey,quantity] of quantitiesByProduct){
+        const stockResult=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',Number(productKey)).maybeSingle();
+        if(stockResult.error) throw stockResult.error;
+        const available=Number(stockResult.data?.quantity||0);
+        if(!stockResult.data || available<quantity){
+          throw new Error(`لا يمكن حذف الفاتورة لأن رصيد الصنف "${namesByProduct.get(productKey)}" (${available}) أقل من كمية الفاتورة (${quantity})`);
+        }
+        stockChanges.push({stockId:stockResult.data.id,quantity:available-quantity});
+      }
+
+      for(const change of stockChanges){
+        const updateResult=await db.from('product_stock').update({quantity:change.quantity}).eq('id',change.stockId).select('id').single();
+        if(updateResult.error) throw updateResult.error;
+      }
+      const detailsDelete=await db.from('purchase_items').delete().eq('purchase_id',purchaseId);
+      if(detailsDelete.error) throw detailsDelete.error;
+      const purchaseDelete=await db.from('purchases').delete().eq('id',purchaseId).select('id');
+      if(purchaseDelete.error) throw purchaseDelete.error;
+      if(!purchaseDelete.data?.length) throw new Error('لم يتم حذف الفاتورة بسبب صلاحيات Supabase');
+      showMessage(`تم حذف فاتورة المشتريات ${purchaseResult.data.invoice_no} وخصم كمياتها من المخزن`);
+      await loadProducts();
+      await loadPurchaseTable();
+      await loadReports();
+    }catch(err){ showMessage('لم يتم حذف فاتورة المشتريات: '+(err.message||err),true); }
+  }
+
   async function loadPurchaseTable() {
       const { data } = await db.from('purchases').select('*, suppliers(name)').order('id', {ascending:false});
       document.getElementById('purchases-table').innerHTML = (data||[]).map(p => `<tr>
@@ -676,7 +721,7 @@
           <td>${p.suppliers?.name || '-'}</td>
           <td>${Number(p.total).toFixed(2)} ج.م</td>
           <td>${new Date(p.created_at).toLocaleDateString('ar-EG')}</td>
-          <td><button class="btn secondary" style="padding:4px 8px" onclick="printPurchaseInvoice(${p.id})">طباعة</button></td>
+          <td><button class="btn secondary" style="padding:4px 8px" onclick="printPurchaseInvoice(${p.id})">طباعة</button> <button class="btn" style="padding:4px 8px;background:var(--red)" onclick="requireAdminAuth(()=>deletePurchaseInvoice(${p.id}))">حذف وإخراج من المخزن</button></td>
       </tr>`).join('');
   }
 
