@@ -421,7 +421,8 @@
             <h3>🖨️ إعدادات الطباعة</h3>
             <div class="form-group"><label>عرض الباركود داخل الملصق (%)</label><input type="number" id="barcode_scale" value="98" min="30" max="98"></div>
             <div class="form-row"><div class="form-group"><label>سُمك خطوط الباركود</label><input type="number" id="barcode_width" value="0.8" step="0.1" min="0.2" max="2"></div><div class="form-group"><label>طول خطوط الباركود (px)</label><input type="number" id="barcode_height" value="14" min="5" max="18"></div></div>
-            <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button><p style="color:var(--muted);font-size:12px;margin-top:10px">غيّر القيم ثم اضغط حفظ الإعدادات. العرض يتحكم في امتلاء الورقة، والسُمك والطول يتحكمان في وضوح القراءة.</p>
+            <div class="form-row"><div class="form-group"><label>عرض الفاتورة الحرارية (مم)</label><input type="number" id="receipt_width" value="68" min="50" max="80" step="1"></div><div class="form-group"><label>إزاحة الفاتورة يمينًا/يسارًا (مم)</label><input type="number" id="receipt_offset" value="0" min="-15" max="15" step="0.5"></div></div>
+            <button class="btn" onclick="saveBarcodeSettings()" style="width:auto;">حفظ الإعدادات</button><p style="color:var(--muted);font-size:12px;margin-top:10px">إزاحة موجبة تحرك الفاتورة يمينًا، وإزاحة سالبة تحركها يسارًا. ابدأ بـ 1 أو 2 مم إذا كانت الطباعة ناحية الشمال.</p>
         </div>
       </section>
     </main>
@@ -443,6 +444,8 @@
   let bcScale = parseFloat(localStorage.getItem('bc_scale_v5') || '98');
   let bcWidth = parseFloat(localStorage.getItem('bc_width_v5') || '0.8');
   let bcHeight = parseFloat(localStorage.getItem('bc_height_v5') || '14');
+  let receiptWidth = parseFloat(localStorage.getItem('receipt_width_v1') || '68');
+  let receiptOffset = parseFloat(localStorage.getItem('receipt_offset_v1') || '0');
   
   async function login(){
     const user=document.getElementById('login-user').value.trim();
@@ -500,6 +503,8 @@
         document.getElementById('barcode_scale').value = bcScale;
         document.getElementById('barcode_width').value = bcWidth;
         document.getElementById('barcode_height').value = bcHeight;
+        document.getElementById('receipt_width').value = receiptWidth;
+        document.getElementById('receipt_offset').value = receiptOffset;
     }
     if(page==='expenses') loadExpenses();
   }
@@ -976,7 +981,15 @@
     const body=document.getElementById('sales-history-table'); if(!body) return;
     const {data,error}=await db.from('sales').select('id,invoice_no,total,payment_method,payment_status,created_at').order('id',{ascending:false});
     if(error){ body.innerHTML='<tr><td colspan="5">تعذر تحميل سجل المبيعات: '+escapeHtml(error.message)+'</td></tr>'; return; }
-    body.innerHTML=(data||[]).map(s=>`<tr><td>${escapeHtml(s.invoice_no||('-'+s.id))}</td><td>${Number(s.total||0).toFixed(2)} ج.م</td><td>${s.payment_method==='cash'?'كاش':s.payment_method==='instapay'?'إنستا باي':s.payment_method==='wallet'?'محفظة':'آجل'}</td><td>${s.payment_status||'مسجلة'}</td><td>${s.created_at?new Date(s.created_at).toLocaleString('ar-EG'):'-'}</td><td><button class="btn" style="padding:4px 8px;background:var(--red)" onclick="requireAdminAuth(()=>deleteSaleAndRestore(${s.id}))">حذف وإرجاع المخزون</button></td></tr>`).join('')||'<tr><td colspan="6">لا توجد فواتير</td></tr>';
+    body.innerHTML=(data||[]).map(s=>`<tr><td>${escapeHtml(s.invoice_no||('-'+s.id))}</td><td>${Number(s.total||0).toFixed(2)} ج.م</td><td>${s.payment_method==='cash'?'كاش':s.payment_method==='instapay'?'إنستا باي':s.payment_method==='wallet'?'محفظة':'آجل'}</td><td>${s.payment_status||'مسجلة'}</td><td>${s.created_at?new Date(s.created_at).toLocaleString('ar-EG'):'-'}</td><td><button class="btn secondary" style="padding:4px 8px" onclick="reprintSale(${s.id})">إعادة طباعة</button> <button class="btn" style="padding:4px 8px;background:var(--red)" onclick="requireAdminAuth(()=>deleteSaleAndRestore(${s.id}))">حذف وإرجاع المخزون</button></td></tr>`).join('')||'<tr><td colspan="6">لا توجد فواتير</td></tr>';
+  }
+
+  async function reprintSale(saleId){
+    const sr=await db.from('sales').select('id,invoice_no,total,created_at,payment_method,payment_status').eq('id',saleId).single();
+    const ir=await db.from('sales_items').select('product_name,quantity,price').eq('sale_id',saleId).order('id');
+    if(sr.error||ir.error) return showMessage('تعذر تحميل الفاتورة لإعادة طباعتها',true);
+    if(!sr.data) return showMessage('الفاتورة غير موجودة',true);
+    printReceipt({...sr.data,items:(ir.data||[]).map(i=>({name:i.product_name,qty:Number(i.quantity),default_sale_price:Number(i.price)}))});
   }
 
   // --- المرتجعات ---
@@ -1366,9 +1379,13 @@
       bcScale = Math.max(30, Math.min(98, parseFloat(document.getElementById('barcode_scale').value) || 98));
       bcWidth = Math.max(0.2, Math.min(2, parseFloat(document.getElementById('barcode_width').value) || 0.8));
       bcHeight = Math.max(5, Math.min(18, parseFloat(document.getElementById('barcode_height').value) || 14));
+      receiptWidth = Math.max(50, Math.min(80, parseFloat(document.getElementById('receipt_width').value) || 68));
+      receiptOffset = Math.max(-15, Math.min(15, parseFloat(document.getElementById('receipt_offset').value) || 0));
       localStorage.setItem('bc_scale_v5', bcScale);
       localStorage.setItem('bc_width_v5', bcWidth);
       localStorage.setItem('bc_height_v5', bcHeight);
+      localStorage.setItem('receipt_width_v1', receiptWidth);
+      localStorage.setItem('receipt_offset_v1', receiptOffset);
       showMessage('تم حفظ إعدادات الطباعة بنجاح!');
   }
 
@@ -1538,7 +1555,7 @@
     if(mode==='receipt'){
       const itemsCount=Number(arguments[1]||1);
       const pageHeight=Math.min(320, Math.max(170, 145 + itemsCount*18));
-      style.textContent=`@media print { @page { size:80mm ${pageHeight}mm; margin:0; } html,body { width:80mm !important; min-width:80mm !important; height:${pageHeight}mm !important; margin:0 !important; padding:0 !important; overflow:visible !important; } body.printing-receipt { display:block !important; text-align:center !important; } #receipt-window { display:block !important; width:80mm !important; min-width:80mm !important; min-height:${pageHeight}mm !important; height:auto !important; margin:0 auto !important; padding:0 !important; overflow:visible !important; } .thermal-receipt { display:block !important; width:68mm !important; max-width:68mm !important; min-height:0 !important; margin:0 auto !important; padding:4mm 1mm 5mm !important; overflow:hidden !important; text-align:center !important; } }`;
+      style.textContent=`@media print { @page { size:80mm ${pageHeight}mm; margin:0; } html,body { width:80mm !important; min-width:80mm !important; height:${pageHeight}mm !important; margin:0 !important; padding:0 !important; overflow:visible !important; } body.printing-receipt { display:block !important; text-align:center !important; } #receipt-window { display:block !important; width:80mm !important; min-width:80mm !important; min-height:${pageHeight}mm !important; height:auto !important; margin:0 auto !important; padding:0 !important; overflow:visible !important; } .thermal-receipt { display:block !important; width:${receiptWidth}mm !important; max-width:${receiptWidth}mm !important; min-height:0 !important; margin:0 auto !important; transform:translateX(${receiptOffset}mm) !important; padding:4mm 1mm 5mm !important; overflow:hidden !important; text-align:center !important; } }`;
     }else{
       style.textContent='@media print { @page { size: 50mm 25mm; margin: 0; } html,body { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; overflow:hidden !important; } #receipt-window { width:50mm !important; height:25mm !important; margin:0 !important; padding:0 !important; } }';
     }
@@ -1574,7 +1591,7 @@
 
   function printReceipt(sale){
     setPrintMode('receipt', sale.items?.length || 1);
-    const now = new Date();
+    const now = sale.created_at ? new Date(sale.created_at) : new Date();
     const dateStr = now.toLocaleDateString('ar-EG');
     const timeStr = now.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
     let itemsHtml = sale.items.map(i => `
