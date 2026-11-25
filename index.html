@@ -588,10 +588,10 @@
 
   async function savePurchaseInvoice() {
       const supplierId = document.getElementById('pur-supplier').value;
-      const invoiceNo = document.getElementById('pur-invoice-no').value.trim();
+      const enteredInvoiceNo = document.getElementById('pur-invoice-no').value.trim();
       const rows = document.querySelectorAll('.pur-item-row');
 
-      if(!supplierId || !invoiceNo) return showMessage('اختر المورد واكتب رقم الفاتورة', true);
+      if(!supplierId || !enteredInvoiceNo) return showMessage('اختر المورد واكتب رقم الفاتورة', true);
       if(rows.length === 0) return showMessage('أضف صنف واحد على الأقل', true);
 
       let totalInvoice = 0;
@@ -614,6 +614,18 @@
       if(itemsToInsert.length === 0) return showMessage('لا توجد أصناف صحيحة', true);
 
       try {
+          // رقم الفاتورة فريد في قاعدة البيانات. إذا كان الرقم مستخدماً من قبل،
+          // نحتفظ بالرقم الأصلي ونضيف لاحقة تلقائية حتى لا تتوقف عملية الحفظ.
+          let invoiceNo = enteredInvoiceNo;
+          let invoiceNumberSuffix = 1;
+          while(true){
+              const existingInvoice = await db.from('purchases').select('id').eq('invoice_no',invoiceNo).maybeSingle();
+              if(existingInvoice.error) throw existingInvoice.error;
+              if(!existingInvoice.data) break;
+              invoiceNumberSuffix++;
+              invoiceNo = `${enteredInvoiceNo}-${invoiceNumberSuffix}`;
+          }
+
           // 1. إضافة الفاتورة الإجمالية للمورد
           const {data: pData, error: pError} = await db.from('purchases').insert([{
               invoice_no: invoiceNo,
@@ -648,7 +660,9 @@
               if(detail.error) throw detail.error;
           }
 
-          showMessage('تم حفظ الفاتورة وإدخال البضاعة للمخزن!');
+          showMessage(invoiceNo===enteredInvoiceNo
+              ? 'تم حفظ الفاتورة وإدخال البضاعة للمخزن!'
+              : `تم الحفظ. رقم الفاتورة مستخدم من قبل، وتم تسجيلها برقم ${invoiceNo}`);
           document.getElementById('pur-items-container').innerHTML = '';
           document.getElementById('pur-invoice-no').value = '';
           updatePurchaseTotal();
