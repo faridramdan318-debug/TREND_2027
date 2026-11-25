@@ -693,7 +693,8 @@
       if(itemsResult.error) throw itemsResult.error;
       const items=itemsResult.data||[];
 
-      // نتحقق من كل الأرصدة أولاً حتى لا يصبح المخزون بالسالب.
+      // نخصم الرصيد المتبقي فقط. إذا كان جزء من الكمية قد بيع، لا نوقف حذف الفاتورة
+      // ولا نجعل المخزون سالبًا؛ يتم تصفير الرصيد المتاح ثم حذف الفاتورة.
       const quantitiesByProduct=new Map();
       const namesByProduct=new Map();
       for(const item of items){
@@ -702,14 +703,17 @@
         namesByProduct.set(productKey,item.product_name||'-');
       }
       const stockChanges=[];
+      let partiallyConsumed=false;
       for(const [productKey,quantity] of quantitiesByProduct){
         const stockResult=await db.from('product_stock').select('id,quantity').eq('warehouse_id',defaultWarehouseId).eq('product_id',Number(productKey)).maybeSingle();
         if(stockResult.error) throw stockResult.error;
         const available=Number(stockResult.data?.quantity||0);
-        if(!stockResult.data || available<quantity){
-          throw new Error(`لا يمكن حذف الفاتورة لأن رصيد الصنف "${namesByProduct.get(productKey)}" (${available}) أقل من كمية الفاتورة (${quantity})`);
+        if(!stockResult.data) {
+          partiallyConsumed=true;
+          continue;
         }
-        stockChanges.push({stockId:stockResult.data.id,quantity:available-quantity});
+        if(available<quantity) partiallyConsumed=true;
+        stockChanges.push({stockId:stockResult.data.id,quantity:Math.max(0,available-quantity)});
       }
 
       for(const change of stockChanges){
@@ -721,7 +725,9 @@
       const purchaseDelete=await db.from('purchases').delete().eq('id',purchaseId).select('id');
       if(purchaseDelete.error) throw purchaseDelete.error;
       if(!purchaseDelete.data?.length) throw new Error('لم يتم حذف الفاتورة بسبب صلاحيات Supabase');
-      showMessage(`تم حذف فاتورة المشتريات ${purchaseResult.data.invoice_no} وخصم كمياتها من المخزن`);
+      showMessage(partiallyConsumed
+        ? `تم حذف فاتورة المشتريات ${purchaseResult.data.invoice_no} وخصم الرصيد المتبقي من المخزن (بعض الكمية كانت مباعة)`
+        : `تم حذف فاتورة المشتريات ${purchaseResult.data.invoice_no} وخصم كمياتها من المخزن`);
       await loadProducts();
       await loadPurchaseTable();
       await loadReports();
