@@ -191,7 +191,7 @@
       </section>
 
       <section id="page-inventory" class="page">
-        <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة للمخزن</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name"></div><div class="form-group"><label>الباركود (لو سبتيه فاضي هيتولد تلقائي)</label><input id="p_barcode"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div></div><div class="form-group"><label>الكمية *</label><input type="number" id="p_quantity" value="0"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والباركود 🎈</button></div><div class="card"><h3>📋 قائمة الألعاب</h3><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>بيع</th><th>رصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div></div>
+        <div class="grid-two"><div class="card"><h3>➕ إضافة لعبة جديدة للمخزن</h3><div class="form-group"><label>اسم الصنف *</label><input id="p_name"></div><div class="form-group"><label>الباركود (لو سبتيه فاضي هيتولد تلقائي)</label><input id="p_barcode"></div><div class="form-row"><div class="form-group"><label>سعر الشراء</label><input type="number" id="p_purchase" value="0"></div><div class="form-group"><label>سعر البيع</label><input type="number" id="p_sale" value="0"></div></div><div class="form-group"><label>الكمية *</label><input type="number" id="p_quantity" value="0"></div><button class="btn full" onclick="addProduct()">حفظ اللعبة والباركود 🎈</button></div><div class="card"><h3>📋 قائمة الألعاب</h3><div class="form-group" style="margin-bottom:12px"><label>بحث باسم الصنف</label><input id="inventory-search" type="search" placeholder="اكتب اسم الصنف للبحث..." oninput="renderInventoryTable()" autocomplete="off"></div><div class="table-wrap" style="max-height:400px; overflow-y:auto;"><table><thead><tr><th>#</th><th>اللعبة</th><th>الكود</th><th>بيع</th><th>رصيد</th><th>إجراءات</th></tr></thead><tbody id="inventory-table"></tbody></table></div></div></div>
       </section>
 
       <section id="page-storage" class="page">
@@ -1297,10 +1297,13 @@
 
   function renderInventoryTable(){
     const body=document.getElementById('inventory-table');
-    body.innerHTML = allProducts.filter(p=>Object.prototype.hasOwnProperty.call(stockByProduct,p.id)).map((p,i)=>{
+    const search=(document.getElementById('inventory-search')?.value||'').trim().toLocaleLowerCase('ar');
+    const inventoryProducts=allProducts.filter(p=>Object.prototype.hasOwnProperty.call(stockByProduct,p.id));
+    const filteredProducts=search ? inventoryProducts.filter(p=>String(p.name||'').toLocaleLowerCase('ar').includes(search)) : inventoryProducts;
+    body.innerHTML = filteredProducts.map((p,i)=>{
       const stock = stockByProduct[p.id] || 0;
       return `<tr><td>${i+1}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.barcode)}</td><td>${p.default_sale_price}</td><td>${stock}</td><td><button class="btn secondary" style="padding:5px 8px;" onclick="printLabelById(${p.id})">باركود</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>editProduct(${p.id}))">تعديل</button> <button class="btn" style="padding:5px 8px; background:var(--red);" onclick="requireAdminAuth(()=>deleteProduct(${p.id}))">حذف</button> <button class="btn secondary" style="padding:5px 8px;" onclick="requireAdminAuth(()=>transferMainToPrivate(${p.id}))">تحويل للمنفصل</button></td></tr>`;
-    }).join('');
+    }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted)">${search?'لا توجد أصناف مطابقة للبحث':'لا توجد أصناف في المخزن'}</td></tr>`;
   }
 
   async function transferMainToPrivate(productId){
