@@ -1485,17 +1485,31 @@
   }
 
   async function addProductByBarcode(code){
+    const arabicKeyboardMap={
+      'ض':'q','ص':'w','ث':'e','ق':'r','ف':'t','غ':'y','ع':'u','ه':'i','خ':'o','ح':'p','ج':'[','د':']',
+      'ش':'a','س':'s','ي':'d','ب':'f','ل':'g','ا':'h','ت':'j','ن':'k','م':'l','ك':';','ط':"'",
+      'ئ':'z','ء':'x','ؤ':'c','ر':'v','لا':'b','ى':'n','ة':'m','و':',','ز':'.','ظ':'/'
+    };
     const normalize=v=>String(v||'').normalize('NFKC').toLowerCase().trim()
+      .replace(/لا/g,arabicKeyboardMap['لا'])
+      .replace(/[ضصثقفغعهخحجدشسيبلاتنمكطئءؤرىةوزظ]/g,ch=>arabicKeyboardMap[ch]||ch)
       .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
       .replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
       .replace(/[^a-z0-9]/g,'');
     const clean=normalize(code);
+    const numericCode=clean.replace(/\D/g,'');
     const input=document.getElementById('pos-search');
-    let product=allProducts.find(p=>normalize(p.barcode)===clean);
+    const findProduct=products=>{
+      const exact=(products||[]).find(p=>normalize(p.barcode)===clean);
+      if(exact || !numericCode) return exact;
+      const numericMatches=(products||[]).filter(p=>normalize(p.barcode).replace(/\D/g,'')===numericCode);
+      return numericMatches.length===1 ? numericMatches[0] : null;
+    };
+    let product=findProduct(allProducts);
     if(!product){
       const result=await db.from('products').select('id,name,barcode,default_purchase_price,default_sale_price');
       if(result.error) return showMessage('تعذر قراءة المنتجات من قاعدة البيانات',true);
-      product=(result.data||[]).find(p=>normalize(p.barcode)===clean);
+      product=findProduct(result.data||[]);
       if(product){
         const index=allProducts.findIndex(p=>String(p.id)===String(product.id));
         if(index>=0) allProducts[index]={...allProducts[index],...product};
