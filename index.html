@@ -1369,20 +1369,15 @@
   }
 
   async function deleteProduct(id){
-    if(!confirm('حذف اللعبة من المخزن الرئيسي؟')) return;
+    if(!confirm('إخراج الصنف من المخزن الرئيسي؟ سيظل محفوظاً داخل الفواتير القديمة والتقارير.')) return;
     if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير مضبوط',true);
     try{
       const stockDelete=await db.from('product_stock').delete().eq('product_id',id).eq('warehouse_id',defaultWarehouseId).select('id');
       if(stockDelete.error) throw stockDelete.error;
-      // نترك product إذا كان له مبيعات حتى تظل المرتجعات وسجل الفواتير يعملان.
-      const salesCheck=await db.from('sales_items').select('id').eq('product_id',id).limit(1);
-      if(salesCheck.error) throw salesCheck.error;
-      if(!salesCheck.data?.length){
-        const productDelete=await db.from('products').delete().eq('id',id).select('id');
-        if(productDelete.error) throw productDelete.error;
-      }
+      // لا نحذف سجل المنتج نفسه؛ فقد يكون مرتبطاً بفواتير مشتريات أو مبيعات قديمة
+      // عبر purchase_items.product_id أو sales_items.product_id، وقاعدة البيانات تمنع كسر هذه الروابط.
       delete stockByProduct[id];
-      showMessage('تم حذف الصنف من المخزن الرئيسي');
+      showMessage('تم إخراج الصنف من المخزن الرئيسي مع الاحتفاظ به داخل الفواتير القديمة');
       await loadProducts();
     }catch(err){showMessage('لم يتم حذف الصنف: '+(err.message||err),true);}
   }
