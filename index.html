@@ -239,6 +239,7 @@
                 <div id="pur-items-container">
                     <!-- حقول الأصناف هتتضاف هنا -->
                 </div>
+                <datalist id="pur-product-options"></datalist>
                 <button class="btn secondary full" onclick="addPurchaseItemRow()" style="margin-bottom:10px;">+ إضافة صنف للفاتورة</button>
                 <div class="total" style="margin:12px 0"><span>مجمل فاتورة المشتريات</span><strong id="purchase-total">0.00 ج.م</strong></div><button class="btn full" onclick="savePurchaseInvoice()">حفظ الفاتورة بالكامل</button>
             </div>
@@ -563,20 +564,51 @@
   }
 
   // إضافة صف جديد للأصناف في فاتورة الشراء
+  function refreshPurchaseProductOptions(){
+      const list=document.getElementById('pur-product-options');
+      if(!list) return;
+      list.innerHTML=(allProducts||[]).map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.barcode||'')}</option>`).join('');
+  }
+
+  function purchaseNameChanged(input){
+      const row=input.closest('.pur-item-row');
+      if(!row) return;
+      const value=String(input.value||'').trim();
+      const normalized=normalizeProductName(value);
+      const product=(allProducts||[]).find(p=>normalizeProductName(p.name)===normalized || String(p.barcode||'').trim()===value);
+      const currentStock=row.querySelector('.pi-current-stock');
+      if(!product){
+          if(currentStock){ currentStock.value=''; currentStock.title='صنف جديد أو لم يتم اختيار صنف من القائمة'; }
+          return;
+      }
+      row.querySelector('.pi-name').value=product.name||value;
+      row.querySelector('.pi-code').value=product.barcode||'';
+      row.querySelector('.pi-cost').value=Number(product.default_purchase_price||0);
+      row.querySelector('.pi-sale').value=Number(product.default_sale_price||0);
+      if(currentStock){
+          const stock=Number(stockByProduct[product.id]||0);
+          currentStock.value=stock;
+          currentStock.title=`الرصيد الحالي في المخزن: ${stock}`;
+      }
+      updatePurchaseTotal();
+  }
+
   function addPurchaseItemRow() {
       const container = document.getElementById('pur-items-container');
       const row = document.createElement('div');
       row.className = 'pur-item-row';
-      row.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 40px; gap:5px; margin-bottom:5px; align-items:center;';
+      row.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr 1fr .9fr .9fr 40px; gap:5px; margin-bottom:5px; align-items:center;';
       row.innerHTML = `
-          <input type="text" placeholder="اسم الصنف" class="pi-name">
+          <input type="text" placeholder="اسم الصنف الموجود أو الجديد" class="pi-name" list="pur-product-options" oninput="purchaseNameChanged(this)" onchange="purchaseNameChanged(this)" autocomplete="off">
           <input type="text" placeholder="الكود" class="pi-code">
           <input type="number" placeholder="شراء" class="pi-cost" value="0" oninput="updatePurchaseTotal()">
           <input type="number" placeholder="بيع" class="pi-sale" value="0">
-          <input type="number" placeholder="كمية" class="pi-qty" value="1" oninput="updatePurchaseTotal()">
+          <input type="number" placeholder="كمية الإضافة" title="الكمية التي ستضاف من الفاتورة الجديدة" class="pi-qty" value="1" min="1" oninput="updatePurchaseTotal()">
+          <input type="number" placeholder="الرصيد الحالي" title="الرصيد الحالي في المخزن" class="pi-current-stock" value="" readonly style="background:#f5f3fb;color:var(--muted)">
           <button type="button" onclick="this.parentElement.remove();updatePurchaseTotal()" style="background:none; border:none; color:red; cursor:pointer;">✖</button>
       `;
       container.appendChild(row);
+      refreshPurchaseProductOptions();
       updatePurchaseTotal();
   }
 
@@ -600,7 +632,7 @@
 
       rows.forEach(row => {
           const name = row.querySelector('.pi-name').value.trim();
-          const code = row.querySelector('.pi-code').value.trim() || 'TR-' + String(Math.floor(100 + Math.random()*900));
+          const code = row.querySelector('.pi-code').value.trim();
           const cost = parseFloat(row.querySelector('.pi-cost').value) || 0;
           const sale = parseFloat(row.querySelector('.pi-sale').value) || 0;
           const qty = parseInt(row.querySelector('.pi-qty').value) || 0;
@@ -636,14 +668,18 @@
 
           // 2. إدخال الأصناف للمخزن الرئيسي بنفس الباركود بدون تكرار المنتج.
           for (const item of itemsToInsert) {
-              let productResult=await db.from('products').select('id,name,barcode').eq('barcode',item.code).maybeSingle();
+              let productResult=item.code
+                ? await db.from('products').select('id,name,barcode').eq('barcode',item.code).maybeSingle()
+                : await db.from('products').select('id,name,barcode').ilike('name',item.name).limit(1);
               if(productResult.error) throw productResult.error;
-              let productId=productResult.data?.id;
+              let existingProduct=item.code ? productResult.data : (productResult.data||[])[0];
+              let productId=existingProduct?.id;
               if(productId){
-                  const updated=await db.from('products').update({name:item.name,default_purchase_price:item.cost,default_sale_price:item.sale}).eq('id',productId);
+                  const updated=await db.from('products').update({default_purchase_price:item.cost,default_sale_price:item.sale}).eq('id',productId);
                   if(updated.error) throw updated.error;
               }else{
-                  const created=await db.from('products').insert([{name:item.name,barcode:item.code,default_purchase_price:item.cost,default_sale_price:item.sale}]).select('id').single();
+                  const newCode=item.code || await generateShortBarcode();
+                  const created=await db.from('products').insert([{name:item.name,barcode:newCode,default_purchase_price:item.cost,default_sale_price:item.sale}]).select('id').single();
                   if(created.error) throw created.error;
                   productId=created.data.id;
               }
@@ -1242,6 +1278,10 @@
     throw new Error('تعذر توليد باركود جديد، جرّب مرة أخرى');
   }
 
+  function normalizeProductName(value){
+    return String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar');
+  }
+
   async function addProduct(){
     const name=document.getElementById('p_name').value.trim();
     let barcode=document.getElementById('p_barcode').value.trim();
@@ -1250,6 +1290,44 @@
     if(!defaultWarehouseId) return showMessage('المخزن الرئيسي غير جاهز، أعد تحميل الصفحة', true);
     
     if(!name) return showMessage('اكتب اسم اللعبة', true);
+    if(qty<0) return showMessage('الكمية لا يمكن أن تكون سالبة', true);
+
+    // البحث بالباركود أولاً، ثم بالاسم لمنع إنشاء نفس الصنف مرتين.
+    let existingProduct=null;
+    if(barcode){
+      const byBarcode=await db.from('products').select('id,name,barcode,default_purchase_price,default_sale_price').eq('barcode',barcode).maybeSingle();
+      if(byBarcode.error) return showMessage('تعذر البحث عن الصنف الموجود',true);
+      existingProduct=byBarcode.data;
+    }
+    if(!existingProduct){
+      const byName=await db.from('products').select('id,name,barcode,default_purchase_price,default_sale_price');
+      if(byName.error) return showMessage('تعذر قراءة الأصناف الموجودة',true);
+      existingProduct=(byName.data||[]).find(p=>normalizeProductName(p.name)===normalizeProductName(name));
+    }
+
+    if(existingProduct){
+      if(!confirm(`الصنف "${existingProduct.name}" موجود بالفعل. هل تريد تعديل بياناته وإضافة الكمية الجديدة إلى رصيده؟`)) return;
+      const purchase=Number(document.getElementById('p_purchase').value)||0;
+      const sale=Number(document.getElementById('p_sale').value)||0;
+      const productUpdate=await db.from('products').update({name,default_purchase_price:purchase,default_sale_price:sale}).eq('id',existingProduct.id).select('id,name,barcode,default_purchase_price,default_sale_price').single();
+      if(productUpdate.error) return showMessage('لم يتم تعديل الصنف: '+productUpdate.error.message,true);
+      const stock=await db.from('product_stock').select('id,quantity').eq('product_id',existingProduct.id).eq('warehouse_id',defaultWarehouseId).maybeSingle();
+      if(stock.error) return showMessage('تعذر قراءة رصيد الصنف: '+stock.error.message,true);
+      if(stock.data){
+        const updatedStock=await db.from('product_stock').update({quantity:Number(stock.data.quantity||0)+qty}).eq('id',stock.data.id).select('id').single();
+        if(updatedStock.error) return showMessage('تعذر تحديث رصيد الصنف: '+updatedStock.error.message,true);
+      }else{
+        const newStock=await db.from('product_stock').insert([{product_id:existingProduct.id,warehouse_id:defaultWarehouseId,quantity:qty}]).select('id').single();
+        if(newStock.error) return showMessage('تعذر إضافة رصيد الصنف: '+newStock.error.message,true);
+      }
+      showMessage('الصنف موجود بالفعل؛ تم تعديل بياناته وإضافة الكمية بدون تكرار');
+      document.getElementById('p_name').value=''; document.getElementById('p_barcode').value='';
+      document.getElementById('p_purchase').value='0'; document.getElementById('p_sale').value='0'; document.getElementById('p_quantity').value='0';
+      await loadProducts();
+      printLabel(productUpdate.data);
+      return;
+    }
+
     if(!barcode) barcode = await generateShortBarcode();
     
     const {data:p, error} = await db.from('products').insert([{name, barcode, default_purchase_price:document.getElementById('p_purchase').value, default_sale_price:document.getElementById('p_sale').value}]).select().single();
