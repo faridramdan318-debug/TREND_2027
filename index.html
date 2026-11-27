@@ -1485,15 +1485,22 @@
   }
 
   async function addProductByBarcode(code){
-    const normalize=v=>String(v||'').toLowerCase().trim().replace(/[^a-z0-9]/g,'');
+    const normalize=v=>String(v||'').normalize('NFKC').toLowerCase().trim()
+      .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+      .replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+      .replace(/[^a-z0-9]/g,'');
     const clean=normalize(code);
     const input=document.getElementById('pos-search');
     let product=allProducts.find(p=>normalize(p.barcode)===clean);
     if(!product){
-      const result=await db.from('products').select('id,name,barcode,default_sale_price');
+      const result=await db.from('products').select('id,name,barcode,default_purchase_price,default_sale_price');
       if(result.error) return showMessage('تعذر قراءة المنتجات من قاعدة البيانات',true);
       product=(result.data||[]).find(p=>normalize(p.barcode)===clean);
-      if(product) allProducts.push(product);
+      if(product){
+        const index=allProducts.findIndex(p=>String(p.id)===String(product.id));
+        if(index>=0) allProducts[index]={...allProducts[index],...product};
+        else allProducts.push(product);
+      }
     }
     if(!product){
       if(input){ input.value=''; renderPOSProducts(); }
@@ -1517,6 +1524,8 @@
 
   function handleGlobalBarcodeKey(event){
     if(!isPOSActive() && !isReturnsActive()) return;
+    // خانة البيع تعالج Enter من قيمتها مباشرة؛ لا نقرأ نفس الحروف مرة ثانية هنا.
+    if(event.target?.id==='pos-search') return;
     // Most USB scanners send characters rapidly and finish with Enter.
     if(event.key==='Enter'){
       if(barcodeBuffer.length>=2){
@@ -1532,7 +1541,7 @@
     if(event.key.length===1 && !event.ctrlKey && !event.altKey && !event.metaKey){
       barcodeBuffer += event.key;
       clearTimeout(barcodeTimer);
-      barcodeTimer=setTimeout(()=>{ barcodeBuffer=''; },120);
+      barcodeTimer=setTimeout(()=>{ barcodeBuffer=''; },500);
     }
   }
 
