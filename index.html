@@ -183,7 +183,13 @@
                             <option value="wallet">محفظة إلكترونية</option>
                         </select>
                     </div>
-                    <div class="total"><span>الإجمالي</span><strong id="cart-total">0.00 ج.م</strong></div>
+                    <div class="form-row" style="margin-bottom:10px;align-items:end;">
+                        <div class="form-group" style="margin-bottom:0;"><label>نوع الخصم</label><select id="pos-discount-type" onchange="renderCart()"><option value="amount">خصم بالجنيه</option><option value="percent">خصم بالنسبة %</option></select></div>
+                        <div class="form-group" style="margin-bottom:0;"><label>قيمة الخصم</label><input id="pos-discount-value" type="number" min="0" step="0.01" value="0" oninput="renderCart()"></div>
+                    </div>
+                    <div class="total" style="font-size:15px;margin-bottom:7px;"><span>قبل الخصم</span><strong id="cart-subtotal">0.00 ج.م</strong></div>
+                    <div class="total" style="font-size:15px;margin-bottom:12px;color:var(--red);"><span>الخصم</span><strong id="cart-discount">0.00 ج.م</strong></div>
+                    <div class="total"><span>الإجمالي بعد الخصم</span><strong id="cart-total">0.00 ج.م</strong></div>
                     <button type="button" class="btn full" onclick="executeSale()">إتمام البيع الآن ✨</button>
                 </div>
             </div>
@@ -235,7 +241,7 @@
                     <label>اختر المورد</label>
                     <select id="pur-supplier"></select>
                 </div>
-                <div class="form-group"><label>رقم الفاتورة</label><input id="pur-invoice-no"></div>
+                <div class="form-group"><label>رقم الفاتورة (اختياري)</label><input id="pur-invoice-no" placeholder="اتركه فارغًا ليتم إنشاؤه تلقائيًا"></div>
                 <div id="pur-items-container">
                     <!-- حقول الأصناف هتتضاف هنا -->
                 </div>
@@ -623,7 +629,7 @@
       const enteredInvoiceNo = document.getElementById('pur-invoice-no').value.trim();
       const rows = document.querySelectorAll('.pur-item-row');
 
-      if(!supplierId || !enteredInvoiceNo) return showMessage('اختر المورد واكتب رقم الفاتورة', true);
+      if(!supplierId) return showMessage('اختر المورد أولاً', true);
       if(rows.length === 0) return showMessage('أضف صنف واحد على الأقل', true);
 
       let totalInvoice = 0;
@@ -648,7 +654,8 @@
       try {
           // رقم الفاتورة فريد في قاعدة البيانات. إذا كان الرقم مستخدماً من قبل،
           // نحتفظ بالرقم الأصلي ونضيف لاحقة تلقائية حتى لا تتوقف عملية الحفظ.
-          let invoiceNo = enteredInvoiceNo;
+          const generatedInvoiceNo=!enteredInvoiceNo;
+          let invoiceNo = enteredInvoiceNo || ('PUR-' + Date.now());
           let invoiceNumberSuffix = 1;
           while(true){
               const existingInvoice = await db.from('purchases').select('id').eq('invoice_no',invoiceNo).maybeSingle();
@@ -696,9 +703,11 @@
               if(detail.error) throw detail.error;
           }
 
-          showMessage(invoiceNo===enteredInvoiceNo
-              ? 'تم حفظ الفاتورة وإدخال البضاعة للمخزن!'
-              : `تم الحفظ. رقم الفاتورة مستخدم من قبل، وتم تسجيلها برقم ${invoiceNo}`);
+          showMessage(generatedInvoiceNo
+              ? `تم حفظ الفاتورة تلقائيًا برقم ${invoiceNo} وإدخال البضاعة للمخزن!`
+              : invoiceNo===enteredInvoiceNo
+                ? 'تم حفظ الفاتورة وإدخال البضاعة للمخزن!'
+                : `تم الحفظ. رقم الفاتورة مستخدم من قبل، وتم تسجيلها برقم ${invoiceNo}`);
           document.getElementById('pur-items-container').innerHTML = '';
           document.getElementById('pur-invoice-no').value = '';
           updatePurchaseTotal();
@@ -1090,7 +1099,9 @@
     const ir=await db.from('sales_items').select('product_name,quantity,price').eq('sale_id',saleId).order('id');
     if(sr.error||ir.error) return showMessage('تعذر تحميل الفاتورة لإعادة طباعتها',true);
     if(!sr.data) return showMessage('الفاتورة غير موجودة',true);
-    printReceipt({...sr.data,items:(ir.data||[]).map(i=>({name:i.product_name,qty:Number(i.quantity),default_sale_price:Number(i.price)}))});
+    let discountInfo={};
+    try{ discountInfo=JSON.parse(localStorage.getItem('sale_discount_'+saleId)||'{}')||{}; }catch(_){ discountInfo={}; }
+    printReceipt({...sr.data,...discountInfo,items:(ir.data||[]).map(i=>({name:i.product_name,qty:Number(i.quantity),default_sale_price:Number(i.price)}))});
   }
 
   // --- المرتجعات ---
@@ -1657,15 +1668,25 @@
 
   function removeFromCart(id){ cart=cart.filter(x=>x.id!==id); renderCart(); }
 
+  function getPOSDiscount(subtotal){
+    const value=Math.max(0,Number(document.getElementById('pos-discount-value')?.value)||0);
+    const type=document.getElementById('pos-discount-type')?.value||'amount';
+    const requested=type==='percent' ? subtotal*value/100 : value;
+    return Math.min(subtotal,Math.max(0,requested));
+  }
+
   function renderCart(){
     const box=document.getElementById('cart-items');
-    if(!cart.length){ box.innerHTML='<div class="empty">السلة فارغة</div>'; document.getElementById('cart-total').textContent='0.00 ج.م'; document.getElementById('cart-count').textContent='0 ألعاب'; return; }
+    if(!cart.length){ box.innerHTML='<div class="empty">السلة فارغة</div>'; document.getElementById('cart-subtotal').textContent='0.00 ج.م'; document.getElementById('cart-discount').textContent='0.00 ج.م'; document.getElementById('cart-total').textContent='0.00 ج.م'; document.getElementById('cart-count').textContent='0 ألعاب'; return; }
     let total=0, count=0;
     box.innerHTML=cart.map(item=>{
       const line=Number(item.default_sale_price)*Number(item.qty); total+=line; count+=Number(item.qty);
       return `<div class="cart-item"><div style="flex:1"><b>${escapeHtml(item.name)}</b><div style="color:var(--muted);font-size:12px">${Number(item.default_sale_price).toFixed(2)} ج.م × ${item.qty}</div></div><div style="display:flex;align-items:center;gap:5px"><button type="button" class="controls button" onclick="changeCartQty(${item.id},-1)">−</button><b>${item.qty}</b><button type="button" class="controls button" onclick="changeCartQty(${item.id},1)">+</button><button type="button" onclick="removeFromCart(${item.id})" style="border:0;background:none;color:var(--red);font-size:18px;cursor:pointer" title="حذف">✖</button></div></div>`;
     }).join('');
-    document.getElementById('cart-total').textContent=total.toFixed(2)+' ج.م';
+    const discount=getPOSDiscount(total);
+    document.getElementById('cart-subtotal').textContent=total.toFixed(2)+' ج.م';
+    document.getElementById('cart-discount').textContent=discount.toFixed(2)+' ج.م';
+    document.getElementById('cart-total').textContent=(total-discount).toFixed(2)+' ج.م';
     document.getElementById('cart-count').textContent=count+' ألعاب';
   }
 
@@ -1683,7 +1704,9 @@
       }
 
       const paymentMethod = document.getElementById('pos-payment-method').value;
-      const total = cart.reduce((sum,item)=>sum + Number(item.default_sale_price)*Number(item.qty), 0);
+      const subtotal = cart.reduce((sum,item)=>sum + Number(item.default_sale_price)*Number(item.qty), 0);
+      const discount = getPOSDiscount(subtotal);
+      const total = subtotal-discount;
       const invoiceNo = 'INV-' + Date.now();
       const {data:saleData,error:saleError} = await db.from('sales').insert([{
         invoice_no: invoiceNo, total, user_id: currentUserId, payment_method: paymentMethod
@@ -1705,8 +1728,12 @@
         if(updateError) throw updateError;
       }
 
-      printReceipt({id:saleData.id,invoice_no:invoiceNo,total,items:cart,payment_method:paymentMethod});
-      cart=[]; renderCart(); await loadProducts();
+      localStorage.setItem('sale_discount_'+saleData.id,JSON.stringify({subtotal,discount}));
+      printReceipt({id:saleData.id,invoice_no:invoiceNo,total,subtotal,discount,items:cart,payment_method:paymentMethod});
+      cart=[];
+      const discountInput=document.getElementById('pos-discount-value'); if(discountInput) discountInput.value='0';
+      const discountType=document.getElementById('pos-discount-type'); if(discountType) discountType.value='amount';
+      renderCart(); await loadProducts();
       showMessage('تم البيع وتحديث المخزون بنجاح!');
     } catch(err){ const raw=String(err?.message||err||''); showMessage(raw.includes('generated')||raw.includes('total')?'خطأ في أعمدة الإجمالي؛ تم إصلاح الكود، حدّث الصفحة وجرب البيع مرة أخرى.':'لم يتم حفظ فاتورة البيع. راجع صلاحيات المبيعات والمخزون.',true); console.error('POS sale error:',raw); }
   }
@@ -1758,6 +1785,8 @@
     const now = sale.created_at ? new Date(sale.created_at) : new Date();
     const dateStr = now.toLocaleDateString('ar-EG');
     const timeStr = now.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+    const receiptSubtotal=Number(sale.subtotal ?? sale.total ?? 0);
+    const receiptDiscount=Math.max(0,Number(sale.discount||0));
     let itemsHtml = sale.items.map(i => `
       <tr style="border-bottom:1px dotted #ccc;">
         <td style="text-align:right; padding:6px 0;">${i.name}</td>
@@ -1800,7 +1829,8 @@
           </tbody>
         </table>
         <div class="totals">
-          <div class="grand-total"><span>الإجمالي</span><span>${sale.total} ج.م</span></div>
+          ${receiptDiscount>0?`<div><span>قبل الخصم</span><span>${receiptSubtotal.toFixed(2)} ج.م</span></div><div><span>الخصم</span><span>${receiptDiscount.toFixed(2)} ج.م</span></div>`:''}
+          <div class="grand-total"><span>الإجمالي</span><span>${Number(sale.total||0).toFixed(2)} ج.م</span></div>
         </div>
         <div class="footer">
           <img src="${LOGO_URL}" class="logo" alt="TREND">
